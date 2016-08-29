@@ -16,7 +16,7 @@
  *   ...
  *  
  */
-require_once __DIR__ . '/wechat.class.php';
+require_once __DIR__ . '/Wechat.class.php';
 
 class TPWechat extends Wechat
 {
