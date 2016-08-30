@@ -228,6 +228,12 @@ class WXBiz
 			$appsecret = $this->appsecret;
 		}
 
+		$authname = 'WXBIZ_ACCESS_TOKEN_'.$this->appid;
+		if ($rs = $this->getCache($authname))  {
+			$this->access_token = $rs;
+			return $rs;
+		}
+
 		$CACHE_KEY = 'WXBIZ_COMPONENT_TICKET_'.$this->appid;
 		$verify_ticket = $this->getCache($CACHE_KEY);
 		if(!$verify_ticket){
@@ -246,7 +252,7 @@ class WXBiz
 			}
 			$this->access_token = $json['component_access_token'];
 			$expire = $json['expires_in'] ? intval($json['expires_in'])-600 : 3600;
-			$this->setCache($CACHE_KEY, $this->access_token, $expire);
+			$this->setCache($authname, $this->access_token, $expire);
 			return $this->access_token;
 		}
 		return false;
