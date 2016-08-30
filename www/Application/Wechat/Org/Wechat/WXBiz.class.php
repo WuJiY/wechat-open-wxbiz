@@ -205,16 +205,14 @@ class WXBiz
     }
 
     /**
-     * 验证并缓存第三方调用verify ticket
+     * 更新并缓存第三方调用verify ticket
      * @return bool
      */
-    public function checkTicket(){
+    public function updateTicket(){
     	if($this->valid()){
             $data = $this->getRev()->getRevData();
-            
             $CACHE_KEY = 'WXBIZ_COMPONENT_TICKET_'.$this->appid;
             $this->setCache($CACHE_KEY, $data['ComponentVerifyTicket']);
-
             return $data;
         }
         return false;
@@ -239,24 +237,19 @@ class WXBiz
 			die('no compontent access ticket!');
 		}
 
-
 		$url = self::API_URL_PREFIX.self::COMPONENT_API_TOKEN;
 		$params = array('component_appid'=> $appid, 'component_appsecret'=>$appsecret, 'component_verify_ticket'=>$verify_ticket);
 		$result = $this->http_post($url, self::json_encode($params));
-		dump($result);
-
-		if ($result)
-		{
-			$json = json_decode($result,true);
-			dump($json);
+		if ($result){
+			$json = json_decode($result, true);
 			if (!$json || isset($json['errcode'])) {
 				$this->errCode = $json['errcode'];
 				$this->errMsg = $json['errmsg'];
 				return false;
 			}
-			$this->access_token = $json['access_token'];
-			$expire = $json['expires_in'] ? intval($json['expires_in'])-100 : 3600;
-			$this->setCache($authname, $this->access_token,$expire);
+			$this->access_token = $json['component_access_token'];
+			$expire = $json['expires_in'] ? intval($json['expires_in'])-600 : 3600;
+			$this->setCache($authname, $this->access_token, $expire);
 			return $this->access_token;
 		}
 		return false;

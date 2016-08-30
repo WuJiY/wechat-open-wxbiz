@@ -21,7 +21,7 @@ class NotifyController extends Controller {
     public function authorization(){
         @file_put_contents(RUNTIME_PATH.'wechat_authorization.xml', @file_get_contents("php://input"));
 
-    	if($decrypt = $this->client->checkTicket()){
+    	if($decrypt = $this->client->updateTicket()){
             echo 'SUCCESS';
         }else{
             echo 'FAIL';
