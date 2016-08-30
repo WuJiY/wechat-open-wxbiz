@@ -129,10 +129,10 @@ class WXBiz
 	public function valid()
     {
 
-    	$postStr = "<xml><AppId><![CDATA[wx6a5c7b3deae109fb]]></AppId><Encrypt><![CDATA[0pIhOod2955tTkBexeXr8EMy1Uitz/7ycu9PVyBVaTzEpp/m5whU1iwbLjQGV04DzsFBGTRf+itu5w2N71BT7xlI62J5FTyXrfA5WIY7NKCNfFG+0jKhNednOLB+kG/5PldsysIAKds6cbYGmcZYj+8VT91dM3YLxBsqx+U4MLYfdxO1h841pG8y20S8l38Qu7Tl1G0KYIU/LBcyMI2a68zFYHAGNq7dMupFrG4MiBJ8wYHVjaQrwp0X+SS3Murh/cY2ypYeAkXRlQCjibQzrKIQpQ7Gq6VVpV8f2FGt0xbKcduZPeGn5Vcd5SgKgYfOPk90z3cSQASrQU7CCIC5pdcdXji6D+bF+OvhUHsxNIDvIZaPdvciNLaPXGACw2LHrtpcw4R4ImNFtwcG0JBDpyzo6qPVU+7MXXE/7gsZJT6JmhvmshOsrBITkeieQ6A/cCfZRT1WORaAQDj085B8BQ==]]></Encrypt></xml>";
+  //   	$postStr = "<xml><AppId><![CDATA[wx6a5c7b3deae109fb]]></AppId><Encrypt><![CDATA[0pIhOod2955tTkBexeXr8EMy1Uitz/7ycu9PVyBVaTzEpp/m5whU1iwbLjQGV04DzsFBGTRf+itu5w2N71BT7xlI62J5FTyXrfA5WIY7NKCNfFG+0jKhNednOLB+kG/5PldsysIAKds6cbYGmcZYj+8VT91dM3YLxBsqx+U4MLYfdxO1h841pG8y20S8l38Qu7Tl1G0KYIU/LBcyMI2a68zFYHAGNq7dMupFrG4MiBJ8wYHVjaQrwp0X+SS3Murh/cY2ypYeAkXRlQCjibQzrKIQpQ7Gq6VVpV8f2FGt0xbKcduZPeGn5Vcd5SgKgYfOPk90z3cSQASrQU7CCIC5pdcdXji6D+bF+OvhUHsxNIDvIZaPdvciNLaPXGACw2LHrtpcw4R4ImNFtwcG0JBDpyzo6qPVU+7MXXE/7gsZJT6JmhvmshOsrBITkeieQ6A/cCfZRT1WORaAQDj085B8BQ==]]></Encrypt></xml>";
 
 		if ($_SERVER['REQUEST_METHOD'] == "POST" || true) {
-            //$postStr = file_get_contents("php://input");
+            $postStr = file_get_contents("php://input");
             $array = (array)simplexml_load_string($postStr, 'SimpleXMLElement', LIBXML_NOCDATA);
             $this->encrypt_type = isset($_GET["encrypt_type"]) ? $_GET["encrypt_type"]: '';
             if ($this->encrypt_type == 'aes') { //aes加密
