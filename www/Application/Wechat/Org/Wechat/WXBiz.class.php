@@ -221,11 +221,8 @@ class WXBiz
 
     /**
 	 * 获取access_token
-	 * @param string $appid 如在类初始化时已提供，则可为空
-	 * @param string $appsecret 如在类初始化时已提供，则可为空
-	 * @param string $token 手动指定access_token，非必要情况不建议用
 	 */
-	public function checkAuth($appid='', $appsecret=''){
+	public function checkAuth(){
 		$authname = 'WXBIZ_ACCESS_TOKEN_'.$this->appid;
 		if ($rs = $this->getCache($authname))  {
 			$this->access_token = $rs;
@@ -236,9 +233,9 @@ class WXBiz
 		if(!$verify_ticket){
 			die('no compontent access ticket!');
 		}
-
+		
 		$url = self::API_URL_PREFIX.self::COMPONENT_API_TOKEN;
-		$params = array('component_appid'=> $appid, 'component_appsecret'=>$appsecret, 'component_verify_ticket'=>$verify_ticket);
+		$params = array('component_appid'=> $this->appid, 'component_appsecret'=>$this->appsecret, 'component_verify_ticket'=>$verify_ticket);
 		$result = $this->http_post($url, self::json_encode($params));
 		if ($result){
 			$json = json_decode($result, true);
@@ -296,8 +293,7 @@ class WXBiz
     /**
      * 获取微信服务器发来的信息
      */
-	public function getRev()
-	{
+	public function getRev(){
 		if ($this->_receive) return $this;
 		$postStr = !empty($this->postxml)?$this->postxml:file_get_contents("php://input");
 		//兼顾使用明文又不想调用valid()方法的情况
@@ -311,16 +307,14 @@ class WXBiz
 	/**
 	 * 获取微信服务器发来的信息
 	 */
-	public function getRevData()
-	{
+	public function getRevData(){
 		return $this->_receive;
 	}
 
 	/**
 	 * 获取微信服务器发来的原始加密信息
 	 */
-	public function getRevPostXml()
-	{
+	public function getRevPostXml(){
 	    return $this->postxml;
 	}
 
