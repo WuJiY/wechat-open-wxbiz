@@ -19,6 +19,8 @@ class WXBiz
     private $appsecret;
     private $debug;
     private $access_token;
+    private $verify_ticket;
+    private $pre_auth_code;
     private $logcallback;
     private $_receive;
     private $postxml;
@@ -205,10 +207,11 @@ class WXBiz
      * 更新并缓存第三方调用verify ticket
      * @return bool
      */
-    public function updateTicket(){
+    public function checkTicket(){
+    	$CACHE_KEY = 'WXBIZ_COMPONENT_TICKET_'.$this->appid;
     	if($this->valid()){
             $data = $this->getRev()->getRevData();
-            $CACHE_KEY = 'WXBIZ_COMPONENT_TICKET_'.$this->appid;
+            $this->verify_ticket = $data['ComponentVerifyTicket'];
             $this->setCache($CACHE_KEY, $data['ComponentVerifyTicket']);
             return $data;
         }
@@ -223,19 +226,13 @@ class WXBiz
 	 * @param string $token 手动指定access_token，非必要情况不建议用
 	 */
 	public function checkAuth($appid='', $appsecret=''){
-		if (!$appid || !$appsecret) {
-			$appid = $this->appid;
-			$appsecret = $this->appsecret;
-		}
-
 		$authname = 'WXBIZ_ACCESS_TOKEN_'.$this->appid;
 		if ($rs = $this->getCache($authname))  {
 			$this->access_token = $rs;
 			return $rs;
 		}
 
-		$CACHE_KEY = 'WXBIZ_COMPONENT_TICKET_'.$this->appid;
-		$verify_ticket = $this->getCache($CACHE_KEY);
+		$verify_ticket = $this->getCache('WXBIZ_VERIFY_TICKET_'.$this->appid);
 		if(!$verify_ticket){
 			die('no compontent access ticket!');
 		}
@@ -263,13 +260,17 @@ class WXBiz
 	 * @return [type] [description]
 	 */
 	public function getPreAuthCode(){
+		if (!$this->access_token && !$this->checkAuth()) return false;
+
+		$authcode = 'WXBIZ_PRE_AUTHCODE_'.$this->appid;
+		if ($rs = $this->getCache($authcode))  {
+			$this->pre_auth_code = $rs;
+			return $rs;
+		}
+
 		$url = self::API_URL_PREFIX.self::COMPONENT_PRE_AUTHCODE.'component_access_token='.$this->access_token;
 		$params = array('component_appid'=>$this->appid);
 		$result = $this->http_post($url, self::json_encode($params));
-
-		dump($url);
-		dump($params);
-		dump($result);
 		if ($result){
 			$json = json_decode($result, true);
 			if (!$json || isset($json['errcode'])) {
@@ -277,10 +278,20 @@ class WXBiz
 				$this->errMsg = $json['errmsg'];
 				return false;
 			}
-			return $json;
+			$this->pre_auth_code = $json['pre_auth_code'];
+			$expire = $json['expires_in'] ? intval($json['expires_in'])-200 : 1000;
+			$this->setCache($authcode, $this->pre_auth_code, $expire);
+			return $this->pre_auth_code;
 		}
 		return false;
 	}
+
+	public function getGrantUrl($redirect_uri=''){
+		if($pre_auth_code = $this->getPreAuthCode()){
+			return "https://mp.weixin.qq.com/cgi-bin/componentloginpage?component_appid={$this->appid}&pre_auth_code={$pre_auth_code}&redirect_uri={$redirect_uri}";
+		}
+		return false;
+	}	
 
     /**
      * 获取微信服务器发来的信息
