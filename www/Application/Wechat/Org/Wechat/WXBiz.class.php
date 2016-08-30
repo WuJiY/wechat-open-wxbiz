@@ -236,8 +236,6 @@ class WXBiz
 
 		$CACHE_KEY = 'WXBIZ_COMPONENT_TICKET_'.$this->appid;
 		$verify_ticket = $this->getCache($CACHE_KEY);
-		dump($CACHE_KEY);
-
 		if(!$verify_ticket){
 			die('no compontent access ticket!');
 		}
