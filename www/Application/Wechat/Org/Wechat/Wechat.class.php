@@ -149,8 +149,8 @@ class Wechat
 	const CARD_DELETE                     = '/card/delete?';
 	const CARD_UPDATE                     = '/card/update?';
 	const CARD_GET                        = '/card/get?';
-        const CARD_USER_GETCARDLIST         = '/card/user/getcardlist?';
-        const CARD_BATCHGET                   = '/card/batchget?';
+    const CARD_USER_GETCARDLIST           = '/card/user/getcardlist?';
+    const CARD_BATCHGET                   = '/card/batchget?';
 	const CARD_MODIFY_STOCK               = '/card/modifystock?';
 	const CARD_LOCATION_BATCHADD          = '/card/location/batchadd?';
 	const CARD_LOCATION_BATCHGET          = '/card/location/batchget?';

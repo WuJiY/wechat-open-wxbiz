@@ -1,34 +1,34 @@
 <?php
 namespace Wechat\Controller;
 use Think\Controller;
-use Think\Log;
 class NotifyController extends Controller {
+
+    private $client;
+
+    /**
+     * 引入SDK
+     * @return 
+     */
+    public function _initialize(){
+        import("@.Org.Wechat.TPWXBiz");
+        $this->client = new \TPWXBiz(C('WECHAT')); //创建实例对象
+    }
 
 	/**
 	 * 获取公众号授权
 	 * @return [type] [description]
 	 */
-    public function authorization($signature='', $timestamp='', $nonce='', $encrypt_type='', $msg_signature=''){
-    	import("@.Org.Wechat.WXBizMsgCrypt");
-    	
-    	$options = C('WECHAT');
-    	$pc = new \WXBizMsgCrypt($options['token'], $options['encodingaeskey'], $options['appid']);
+    public function authorization(){
+    	if($valid = $this->client->valid()){
+            $data = $this->client->getRev()->getRevData();
+            S('WECHAT_COMPONENT_TICKET', $data['ComponentVerifyTicket']);
 
-		// 第三方收到公众号平台发送的消息
-		$msg = '';
-		$xml = file_get_contents("php://input");
-		$errCode = $pc->decryptMsg($msg_signature, $timestamp, $nonce, $xml, $msg);
+            @file_put_contents(RUNTIME_PATH.'wechat_authorization.xml', $this->client->getRevPostXml());
 
-		$log = "[WECHAT-NOTIFY-Authorization]: signature:{$signature}\ntimestamp:{$signature}\nnonce:{$nonce}\nencrypt_type:{$encrypt_type}\nmsg_signature:{$msg_signature}\nXML: {$xml}\nRESULT:{$errCode}\nMSG:{$msg}";
-		@file_put_contents(RUNTIME_PATH.'wechat_authorization.xml', $log);
-		Log::write('WECHAT: '.$log, Log::DEBUG);
-
-		if($errCode==0){
-			echo 'SUCCESS';
-		}else{
-			echo 'FAIL';
-		}
-    	
+            echo 'SUCCESS';
+        }else{
+            echo 'FAIL';
+        }
     }
 
     /**
