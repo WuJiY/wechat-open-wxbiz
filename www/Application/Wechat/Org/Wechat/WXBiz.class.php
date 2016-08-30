@@ -10,7 +10,8 @@ class WXBiz
     const API_BASE_URL_PREFIX = 'https://api.weixin.qq.com'; //以下API接口URL需要使用此前缀
 	
     // 第三方开发
-    const COMPONENT_API_TOKEN = "/component/api_component_token?";
+    const COMPONENT_API_TOKEN 		= "/component/api_component_token?";
+    const COMPONENT_PRE_AUTHCODE	= "/component/api_create_preauthcode?";
     
     private $token;
     private $encodingAesKey;
@@ -22,8 +23,7 @@ class WXBiz
     private $_receive;
     private $postxml;
 
-    public function __construct($options)
-	{
+    public function __construct($options){
 		$this->token = isset($options['token'])?$options['token']:'';
 		$this->encodingAesKey = isset($options['encodingaeskey'])?$options['encodingaeskey']:'';
 		$this->appid = isset($options['appid'])?$options['appid']:'';
@@ -154,8 +154,7 @@ class WXBiz
 	/**
 	 * For weixin server validation
 	 */
-	private function checkSignature($encrypt)
-	{
+	private function checkSignature($encrypt){
 		$msg_signature = isset($_GET["msg_signature"])?$_GET["msg_signature"]:'';
 	    $timestamp = isset($_GET["timestamp"])?$_GET["timestamp"]:'';
 	    $nonce = isset($_GET["nonce"])?$_GET["nonce"]:'';
@@ -176,9 +175,7 @@ class WXBiz
 	/**
 	 * 微信验证，包括post来的xml解密
 	 */
-	public function valid()
-    {
-
+	public function valid(){
     	//$postStr = "<xml><AppId><![CDATA[wx6a5c7b3deae109fb]]></AppId><Encrypt><![CDATA[PecTyQvgmdTHFv6WVSm38hZpe6Chhas/Az2pjGsucqrb3WgvujxiviCu4JDwcyTelFJdcPpnLizAN44qyumji8hOeXBoFn5JDexG+LjeLAjKgixi2VkZ/3C21nvaooY+tzYmIYQQUzTFozM1w9BLcEhV9JWOAawiQOQsea4iYsXvPAsujXlgZvGIyZA0VvZY0SDA3oC8T+iw+l3xvkvmIiZeKvNU8z7i+jnECTuwHyAjPrgk7xAHJLtcEWHIIdklG1Qu8Se04tUZxvnDluguhAR1XsOUkl9Mlmt0gwqwrHWrpuWjcllX+WgmUWt16oDAczWklkmOJiKPoPom8GB87GXQuD35xE6p7YKsETeXMqtpfCmb4lPlJU8ypkuuaQ+nLODOb5+/MtSfuYmDj+BDprLNcDgAOPLCOvRXJdbTLS3xQnWai5ZO7s7mkl7OV22coyqd73HX44/qTjuHkmlvfw==]]></Encrypt></xml>";
 		if ($_SERVER['REQUEST_METHOD'] == "POST" || true) {
             $postStr = file_get_contents("php://input");
@@ -249,8 +246,32 @@ class WXBiz
 			}
 			$this->access_token = $json['component_access_token'];
 			$expire = $json['expires_in'] ? intval($json['expires_in'])-600 : 3600;
-			$this->setCache($authname, $this->access_token, $expire);
+			$this->setCache($CACHE_KEY, $this->access_token, $expire);
 			return $this->access_token;
+		}
+		return false;
+	}
+
+	/**
+	 * 获取预授权码
+	 * @return [type] [description]
+	 */
+	public function getPreAuthCode(){
+		$url = self::API_URL_PREFIX.self::COMPONENT_PRE_AUTHCODE.'component_access_token='.$this->access_token;
+		$params = array('component_appid'=>$this->appid);
+		$result = $this->http_post($url, self::json_encode($params));
+
+		dump($url);
+		dump($params);
+		dump($result);
+		if ($result){
+			$json = json_decode($result, true);
+			if (!$json || isset($json['errcode'])) {
+				$this->errCode = $json['errcode'];
+				$this->errMsg = $json['errmsg'];
+				return false;
+			}
+			return $json;
 		}
 		return false;
 	}

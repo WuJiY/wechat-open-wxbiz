@@ -52,7 +52,9 @@ class NotifyController extends Controller {
 
 
     public function test(){
-        $token = $this->client->checkAuth();
+
+        $this->client->checkAuth();
+        $token = $this->client->getPreAuthCode();
         dump($token);
     }
 }
