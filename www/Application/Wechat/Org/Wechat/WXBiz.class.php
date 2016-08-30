@@ -208,7 +208,7 @@ class WXBiz
      * @return bool
      */
     public function checkTicket(){
-    	$CACHE_KEY = 'WXBIZ_COMPONENT_TICKET_'.$this->appid;
+    	$CACHE_KEY = 'WXBIZ_VERIFY_TICKET_'.$this->appid;
     	if($this->valid()){
             $data = $this->getRev()->getRevData();
             $this->verify_ticket = $data['ComponentVerifyTicket'];
