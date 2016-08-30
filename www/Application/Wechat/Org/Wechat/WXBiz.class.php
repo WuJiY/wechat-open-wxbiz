@@ -6,15 +6,18 @@
 
 class WXBiz
 {
+	const API_URL_PREFIX = 'https://api.weixin.qq.com/cgi-bin';
+    const API_BASE_URL_PREFIX = 'https://api.weixin.qq.com'; //以下API接口URL需要使用此前缀
+	
     // 第三方开发
-    const COMPONENT_TOKEN_URL = "/component/api_component_token?";
-
-
+    const COMPONENT_API_TOKEN = "/component/api_component_token?";
+    
     private $token;
     private $encodingAesKey;
     private $appid;
     private $appsecret;
     private $debug;
+    private $access_token;
     private $logcallback;
     private $_receive;
     private $postxml;
@@ -100,6 +103,55 @@ class WXBiz
 	}
 
 	/**
+	 * 微信api不支持中文转义的json结构
+	 * @param array $arr
+	 */
+	static function json_encode($arr) {
+		if (count($arr) == 0) return "[]";
+		$parts = array ();
+		$is_list = false;
+		//Find out if the given array is a numerical array
+		$keys = array_keys ( $arr );
+		$max_length = count ( $arr ) - 1;
+		if (($keys [0] === 0) && ($keys [$max_length] === $max_length )) { //See if the first key is 0 and last key is length - 1
+			$is_list = true;
+			for($i = 0; $i < count ( $keys ); $i ++) { //See if each key correspondes to its position
+				if ($i != $keys [$i]) { //A key fails at position check.
+					$is_list = false; //It is an associative array.
+					break;
+				}
+			}
+		}
+		foreach ( $arr as $key => $value ) {
+			if (is_array ( $value )) { //Custom handling for arrays
+				if ($is_list)
+					$parts [] = self::json_encode ( $value ); /* :RECURSION: */
+				else
+					$parts [] = '"' . $key . '":' . self::json_encode ( $value ); /* :RECURSION: */
+			} else {
+				$str = '';
+				if (! $is_list)
+					$str = '"' . $key . '":';
+				//Custom handling for multiple data types
+				if (!is_string ( $value ) && is_numeric ( $value ) && $value<2000000000)
+					$str .= $value; //Numbers
+				elseif ($value === false)
+				$str .= 'false'; //The booleans
+				elseif ($value === true)
+				$str .= 'true';
+				else
+					$str .= '"' . addslashes ( $value ) . '"'; //All other things
+				// :TODO: Is there any more datatype we should be in the lookout for? (Object?)
+				$parts [] = $str;
+			}
+		}
+		$json = implode ( ',', $parts );
+		if ($is_list)
+			return '[' . $json . ']'; //Return numerical JSON
+		return '{' . $json . '}'; //Return associative JSON
+	}
+
+	/**
 	 * For weixin server validation
 	 */
 	private function checkSignature($encrypt)
@@ -107,7 +159,6 @@ class WXBiz
 		$msg_signature = isset($_GET["msg_signature"])?$_GET["msg_signature"]:'';
 	    $timestamp = isset($_GET["timestamp"])?$_GET["timestamp"]:'';
 	    $nonce = isset($_GET["nonce"])?$_GET["nonce"]:'';
-
 	    //验证安全签名
 		$sha1 = new SHA1;
 		$array = $sha1->getSHA1($this->token, $timestamp, $nonce, $encrypt);
@@ -115,10 +166,9 @@ class WXBiz
 		if ($ret != 0) {
 			return $ret;
 		}
-
 		$signature = $array[1];
 		if ($signature != $msg_signature) {
-			return ErrorCode::$ValidateSignatureError;
+			return false;
 		}
 		return true;
 	}
@@ -129,10 +179,10 @@ class WXBiz
 	public function valid()
     {
 
-  //   	$postStr = "<xml><AppId><![CDATA[wx6a5c7b3deae109fb]]></AppId><Encrypt><![CDATA[0pIhOod2955tTkBexeXr8EMy1Uitz/7ycu9PVyBVaTzEpp/m5whU1iwbLjQGV04DzsFBGTRf+itu5w2N71BT7xlI62J5FTyXrfA5WIY7NKCNfFG+0jKhNednOLB+kG/5PldsysIAKds6cbYGmcZYj+8VT91dM3YLxBsqx+U4MLYfdxO1h841pG8y20S8l38Qu7Tl1G0KYIU/LBcyMI2a68zFYHAGNq7dMupFrG4MiBJ8wYHVjaQrwp0X+SS3Murh/cY2ypYeAkXRlQCjibQzrKIQpQ7Gq6VVpV8f2FGt0xbKcduZPeGn5Vcd5SgKgYfOPk90z3cSQASrQU7CCIC5pdcdXji6D+bF+OvhUHsxNIDvIZaPdvciNLaPXGACw2LHrtpcw4R4ImNFtwcG0JBDpyzo6qPVU+7MXXE/7gsZJT6JmhvmshOsrBITkeieQ6A/cCfZRT1WORaAQDj085B8BQ==]]></Encrypt></xml>";
+    	$postStr = "<xml><AppId><![CDATA[wx6a5c7b3deae109fb]]></AppId><Encrypt><![CDATA[0pIhOod2955tTkBexeXr8EMy1Uitz/7ycu9PVyBVaTzEpp/m5whU1iwbLjQGV04DzsFBGTRf+itu5w2N71BT7xlI62J5FTyXrfA5WIY7NKCNfFG+0jKhNednOLB+kG/5PldsysIAKds6cbYGmcZYj+8VT91dM3YLxBsqx+U4MLYfdxO1h841pG8y20S8l38Qu7Tl1G0KYIU/LBcyMI2a68zFYHAGNq7dMupFrG4MiBJ8wYHVjaQrwp0X+SS3Murh/cY2ypYeAkXRlQCjibQzrKIQpQ7Gq6VVpV8f2FGt0xbKcduZPeGn5Vcd5SgKgYfOPk90z3cSQASrQU7CCIC5pdcdXji6D+bF+OvhUHsxNIDvIZaPdvciNLaPXGACw2LHrtpcw4R4ImNFtwcG0JBDpyzo6qPVU+7MXXE/7gsZJT6JmhvmshOsrBITkeieQ6A/cCfZRT1WORaAQDj085B8BQ==]]></Encrypt></xml>";
 
 		if ($_SERVER['REQUEST_METHOD'] == "POST" || true) {
-            $postStr = file_get_contents("php://input");
+            //$postStr = file_get_contents("php://input");
             $array = (array)simplexml_load_string($postStr, 'SimpleXMLElement', LIBXML_NOCDATA);
             $this->encrypt_type = isset($_GET["encrypt_type"]) ? $_GET["encrypt_type"]: '';
             if ($this->encrypt_type == 'aes') { //aes加密
@@ -154,6 +204,66 @@ class WXBiz
         	return true;
         }
     }
+
+    /**
+     * 验证并缓存第三方调用verify ticket
+     * @return bool
+     */
+    public function checkTicket(){
+    	if($this->valid()){
+            $data = $this->getRev()->getRevData();
+            
+            $CACHE_KEY = 'WXBIZ_COMPONENT_TICKET_'.$this->appid;
+            $this->setCache($CACHE_KEY, $data['ComponentVerifyTicket']);
+
+            return $data;
+        }
+        return false;
+    }
+
+
+    /**
+	 * 获取access_token
+	 * @param string $appid 如在类初始化时已提供，则可为空
+	 * @param string $appsecret 如在类初始化时已提供，则可为空
+	 * @param string $token 手动指定access_token，非必要情况不建议用
+	 */
+	public function checkAuth($appid='', $appsecret=''){
+		if (!$appid || !$appsecret) {
+			$appid = $this->appid;
+			$appsecret = $this->appsecret;
+		}
+
+		$CACHE_KEY = 'WXBIZ_COMPONENT_TICKET_'.$this->appid;
+		$verify_ticket = $this->getCache($CACHE_KEY);
+		dump($CACHE_KEY);
+
+		if(!$verify_ticket){
+			die('no compontent access ticket!');
+		}
+
+
+		$url = self::API_URL_PREFIX.self::COMPONENT_API_TOKEN;
+		$params = array('component_appid'=> $appid, 'component_appsecret'=>$appsecret, 'component_verify_ticket'=>$verify_ticket);
+		$result = $this->http_post($url, self::json_encode($params));
+		dump($result);
+
+		if ($result)
+		{
+			$json = json_decode($result,true);
+			dump($json);
+			if (!$json || isset($json['errcode'])) {
+				$this->errCode = $json['errcode'];
+				$this->errMsg = $json['errmsg'];
+				return false;
+			}
+			$this->access_token = $json['access_token'];
+			$expire = $json['expires_in'] ? intval($json['expires_in'])-100 : 3600;
+			$this->setCache($authname, $this->access_token,$expire);
+			return $this->access_token;
+		}
+		return false;
+	}
 
     /**
      * 获取微信服务器发来的信息
@@ -185,8 +295,6 @@ class WXBiz
 	{
 	    return $this->postxml;
 	}
-
-
 
    	/**
 	 * 设置缓存，按需重载
@@ -430,6 +538,21 @@ class ErrorCode
 	public static $DecodeBase64Error = -40010;
 	public static $GenReturnXmlError = -40011;
 
+	public static $errCode=array(
+        '0' 	=> '处理成功',
+        '40001' => '校验签名失败',
+        '40002' => '解析xml失败',
+        '40003' => '计算签名失败',
+        '40004' => '不合法的AESKey',
+        '40005' => '校验AppID失败',
+        '40006' => 'AES加密失败',
+        '40007' => 'AES解密失败',
+        '40008' => '公众平台发送的xml不合法',
+        '40009' => 'Base64编码失败',
+        '40010' => 'Base64解码失败',
+        '40011' => '公众帐号生成回包xml失败',
+        '61005'	=> '第三方ticket失效'
+    );
 	public static function getErrText($err) {
         if (isset(self::$errCode[$err])) {
             return self::$errCode[$err];

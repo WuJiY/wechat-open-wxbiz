@@ -19,10 +19,7 @@ class NotifyController extends Controller {
 	 * @return [type] [description]
 	 */
     public function authorization(){
-    	if($valid = $this->client->valid()){
-            $data = $this->client->getRev()->getRevData();
-            S('WECHAT_COMPONENT_TICKET', $data['ComponentVerifyTicket']);
-
+    	if($decrypt = $this->client->checkTicket()){
             @file_put_contents(RUNTIME_PATH.'wechat_authorization.xml', $this->client->getRevPostXml());
 
             echo 'SUCCESS';
@@ -51,5 +48,11 @@ class NotifyController extends Controller {
     	@file_put_contents(RUNTIME_PATH.'wechat_ticket.xml', @file_get_contents("php://input"));
 
     	echo 'SUCCESS';
+    }
+
+
+    public function test(){
+        $token = $this->client->checkAuth();
+        dump($token);
     }
 }

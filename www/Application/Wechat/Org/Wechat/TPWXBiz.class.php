@@ -1,21 +1,5 @@
 <?php
-/**
- *  微信公众平台PHP-SDK, ThinkPHP实例
- *  @author dodgepudding@gmail.com
- *  @link https://github.com/dodgepudding/wechat-php-sdk
- *  @version 1.2
- *  usage:
- *   $options = array(
- *          'token'=>'tokenaccesskey', //填写你设定的key
- *          'encodingaeskey'=>'encodingaeskey', //填写加密用的EncodingAESKey
- *          'appid'=>'wxdk1234567890', //填写高级调用功能的app id
- *          'appsecret'=>'xxxxxxxxxxxxxxxxxxx' //填写高级调用功能的密钥
- *      );
- *   $weObj = new TPWechat($options);
- *   $weObj->valid();
- *   ...
- *  
- */
+
 require_once __DIR__ . '/WXBiz.class.php';
 
 class TPWXBiz extends WXBiz
