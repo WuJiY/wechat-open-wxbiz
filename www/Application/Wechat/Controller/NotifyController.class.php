@@ -105,9 +105,11 @@ class NotifyController extends Controller {
      */
     public function events($app_id=''){
         @file_put_contents(RUNTIME_PATH."wechat_events_{$app_id}.xml", @file_get_contents("php://input"));
-
         if($this->client->valid()){
+            @file_put_contents(RUNTIME_PATH."wechat_events_{$app_id}.xml", $this->client->getRevPostXml());
+
             $data = $this->client->getRev()->getRevData();
+
             //switch($data[''])
 
             echo 'SUCCESS';

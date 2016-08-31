@@ -109,23 +109,6 @@ class WXBiz{
     }
 
     /**
-     * 更新并缓存第三方调用verify ticket
-     *
-     * 此接口在授权事件接收时调用
-     * @return bool
-     */
-    public function checkTicket(){
-    	$CACHE_KEY = 'WXBIZ_VERIFY_TICKET_'.$this->appid;
-    	if($this->valid()){
-            $data = $this->getRev()->getRevData();
-            $this->verify_ticket = $data['ComponentVerifyTicket'];
-            $this->setCache($CACHE_KEY, $data['ComponentVerifyTicket']);
-            return $data;
-        }
-        return false;
-    }
-
-    /**
 	 * 获取第三方平台component_access_token
 	 */
 	public function checkAuth(){
