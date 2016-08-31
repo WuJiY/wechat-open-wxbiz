@@ -20,7 +20,21 @@ class NotifyController extends Controller {
     }
 
 	/**
-	 * 1、推送，获取公众号授权
+	 * 获取公众号授权
+        <xml>
+            <AppId><![CDATA[wx6a5c7b3deae109fb]]></AppId>
+            <CreateTime>1472650983</CreateTime>
+            <InfoType><![CDATA[component_verify_ticket]]></InfoType>
+            <ComponentVerifyTicket><![CDATA[ticket@@@sTomyzl5DKMWHThgtqtIrAGsaCSAA5cVNww7rLkIqlABZC00xEDHZnRLiE2-bXsh18toLc6HTZ2rI4uvBJbvHQ]]></ComponentVerifyTicket>
+            </xml>
+
+        <xml>
+            <AppId><![CDATA[wx6a5c7b3deae109fb]]></AppId>
+            <CreateTime>1472651234</CreateTime>
+            <InfoType><![CDATA[unauthorized]]></InfoType>
+            <AuthorizerAppid><![CDATA[wx0a73c7ae093b4842]]></AuthorizerAppid>
+        </xml>
+     * 
 	 * @return [type] [description]
 	 */
     public function authorization(){
@@ -106,7 +120,7 @@ class NotifyController extends Controller {
     public function events($app_id=''){
         @file_put_contents(RUNTIME_PATH."wechat_events_{$app_id}.xml", @file_get_contents("php://input"));
         if($this->client->valid()){
-            @file_put_contents(RUNTIME_PATH."wechat_events_{$app_id}.xml", $this->client->getRevPostXml());
+            @file_put_contents(RUNTIME_PATH."wechat_events_{$app_id}_decrypt.xml", $this->client->getRevPostXml());
 
             $data = $this->client->getRev()->getRevData();
 
