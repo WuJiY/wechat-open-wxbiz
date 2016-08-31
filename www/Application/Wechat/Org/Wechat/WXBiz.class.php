@@ -292,7 +292,7 @@ class WXBiz{
 	 */
 	public function getGrantUrl($redirect_uri=''){
 		if($pre_auth_code = $this->getPreAuthCode()){
-			return C('MP_URL_PREFIX').C('COMPONENT_GRANT_URL')."component_appid={$this->appid}&pre_auth_code={$pre_auth_code}&redirect_uri={$redirect_uri}";
+			return self::MP_URL_PREFIX.self::COMPONENT_GRANT_URL."component_appid={$this->appid}&pre_auth_code={$pre_auth_code}&redirect_uri={$redirect_uri}";
 		}
 		return false;
 	}	
