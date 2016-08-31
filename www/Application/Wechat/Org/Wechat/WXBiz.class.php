@@ -4,14 +4,16 @@
  */
 
 
-class WXBiz
-{
-	const API_URL_PREFIX = 'https://api.weixin.qq.com/cgi-bin';
-    const API_BASE_URL_PREFIX = 'https://api.weixin.qq.com'; //以下API接口URL需要使用此前缀
+class WXBiz{
+
+	const API_URL_PREFIX 			= 'https://api.weixin.qq.com/cgi-bin';
+	const MP_URL_PREFIX 			= 'https://mp.weixin.qq.com/cgi-bin';
 	
     // 第三方开发
     const COMPONENT_API_TOKEN 		= "/component/api_component_token?";
     const COMPONENT_PRE_AUTHCODE	= "/component/api_create_preauthcode?";
+    const COMPONENT_API_AUTH 		= '/component/api_query_auth?';
+    const COMPONENT_GRANT_URL		= '/componentloginpage?';
     
     private $token;
     private $encodingAesKey;
@@ -283,9 +285,14 @@ class WXBiz
 		return false;
 	}
 
+	/**
+	 * 获取公众号授权页面地址
+	 * @param  string $redirect_uri [description]
+	 * @return [type]               [description]
+	 */
 	public function getGrantUrl($redirect_uri=''){
 		if($pre_auth_code = $this->getPreAuthCode()){
-			return "https://mp.weixin.qq.com/cgi-bin/componentloginpage?component_appid={$this->appid}&pre_auth_code={$pre_auth_code}&redirect_uri={$redirect_uri}";
+			return C('MP_URL_PREFIX').C('COMPONENT_GRANT_URL')."component_appid={$this->appid}&pre_auth_code={$pre_auth_code}&redirect_uri={$redirect_uri}";
 		}
 		return false;
 	}	
