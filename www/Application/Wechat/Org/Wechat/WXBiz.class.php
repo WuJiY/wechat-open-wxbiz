@@ -10,9 +10,11 @@ class WXBiz{
 	const MP_URL_PREFIX 			= 'https://mp.weixin.qq.com/cgi-bin';
 	
     // 第三方开发
-    const COMPONENT_API_TOKEN 		= "/component/api_component_token?";
-    const COMPONENT_PRE_AUTHCODE	= "/component/api_create_preauthcode?";
+    const COMPONENT_API_TOKEN 		= '/component/api_component_token?';
+    const COMPONENT_API_PRE_CODE	= '/component/api_create_preauthcode?';
     const COMPONENT_API_AUTH 		= '/component/api_query_auth?';
+    const COMPONENT_API_AUTH_INFO	= '/component/api_get_authorizer_info?';
+    const COMPONENT_API_AUTH_OPTION	= '/component/api_get_authorizer_option?';
     const COMPONENT_GRANT_URL		= '/componentloginpage?';
     
     private $token;
@@ -26,16 +28,327 @@ class WXBiz{
     private $logcallback;
     private $_receive;
     private $postxml;
+    private $authorizer_appid;
+    private $authorizer_access_token;
 
     public function __construct($options){
-		$this->token = isset($options['token'])?$options['token']:'';
-		$this->encodingAesKey = isset($options['encodingaeskey'])?$options['encodingaeskey']:'';
-		$this->appid = isset($options['appid'])?$options['appid']:'';
-		$this->appsecret = isset($options['appsecret'])?$options['appsecret']:'';
-		$this->debug = isset($options['debug'])?$options['debug']:false;
-		$this->logcallback = isset($options['logcallback'])?$options['logcallback']:false;
+		$this->token 			= isset($options['token'])?$options['token']:'';
+		$this->encodingAesKey 	= isset($options['encodingaeskey'])?$options['encodingaeskey']:'';
+		$this->appid 			= isset($options['appid'])?$options['appid']:'';
+		$this->appsecret 		= isset($options['appsecret'])?$options['appsecret']:'';
+		$this->debug 			= isset($options['debug'])?$options['debug']:false;
+		$this->logcallback 		= isset($options['logcallback'])?$options['logcallback']:false;
 	}
 
+
+
+	/**
+	 * 微信验证，POST内容解密
+	 */
+	public function valid(){
+		if ($_SERVER['REQUEST_METHOD'] == "POST" || true) {
+            //$postStr = file_get_contents("php://input");
+			$postStr = '<xml><ToUserName><![CDATA[gh_7d2bd24b4d3b]]></ToUserName><Encrypt><![CDATA[PbkcmMHrikbuopqZFQqWLnYLxzVwyAdTv2L6dA2CGz5HdHhFm8Qt0AztIug8h3R0ovwFWCIBjVqZnHd5Psv7aprHiRtFnkohHCYj1fdass6dZEu9Lx4AvmDAavq72CqRf2GuSShVqifIz+ENVewyyHEH6FsLzwkHiJCK1Olcnn7K7057SeIx8UzCt+sy5zovPtiD3rPpDMaInPMvGOUiZEQqQxwyZiB+wp+mdIHUiV77XiNt0u+kz3EERefNk9MOfSeYo+uuWUJOJ8imk+sp8gmZ4x9BvlNPQdnJXcd+4RRY8BsZdaIQuqUNDuTJa+PT90fze6kxvYuujDi2twcy67lseorze5I9D8Pv0qVkPxgWig6f7i3owlcHyqi4Pgzly2uuA2AwDnGZob+DibPLkQ/Xa2gydDhgP3XmHO+uZhE=]]></Encrypt></xml>';
+
+
+            $array = (array)simplexml_load_string($postStr, 'SimpleXMLElement', LIBXML_NOCDATA);
+            $this->encrypt_type = isset($_GET["encrypt_type"]) ? $_GET["encrypt_type"]: '';
+            if ($this->encrypt_type == 'aes') { //aes加密
+                $this->log($postStr);
+            	$encryptStr = $array['Encrypt'];
+            	$pc = new Prpcrypt($this->encodingAesKey);
+            	$array = $pc->decrypt($encryptStr,$this->appid);
+            	if (!isset($array[0]) || ($array[0] != 0)) {
+            	    die('decrypt error!');
+            	}
+            	$this->postxml = $array[1];
+            } else {
+                $this->postxml = $postStr;
+            }
+
+            if (!$this->checkSignature($encryptStr)) {
+        		die('signature error!');
+        	}
+        	return true;
+        }
+    }
+
+	/**
+	 * 签名验证
+	 */
+	private function checkSignature($encrypt){
+		$msg_signature 	= isset($_GET["msg_signature"])?$_GET["msg_signature"]:'';
+	    $timestamp 		= isset($_GET["timestamp"])?$_GET["timestamp"]:'';
+	    $nonce 			= isset($_GET["nonce"])?$_GET["nonce"]:'';
+	    //验证安全签名
+		$sha1 = new SHA1;
+		$array = $sha1->getSHA1($this->token, $timestamp, $nonce, $encrypt);
+		$ret = $array[0];
+		if ($ret != 0) {
+			return $ret;
+		}
+		$signature = $array[1];
+		if ($signature != $msg_signature) {
+			return false;
+		}
+		return true;
+	}    
+
+    /**
+     * 更新并缓存第三方调用verify ticket
+     *
+     * 此接口在授权事件接收时调用
+     * @return bool
+     */
+    public function checkTicket(){
+    	$CACHE_KEY = 'WXBIZ_VERIFY_TICKET_'.$this->appid;
+    	if($this->valid()){
+            $data = $this->getRev()->getRevData();
+            $this->verify_ticket = $data['ComponentVerifyTicket'];
+            $this->setCache($CACHE_KEY, $data['ComponentVerifyTicket']);
+            return $data;
+        }
+        return false;
+    }
+
+    /**
+     * 更新并缓存第三方调用verify ticket
+     *
+     * 此接口在授权事件接收时调用
+     * @return bool
+     */
+    public function checkTicket(){
+    	$CACHE_KEY = 'WXBIZ_VERIFY_TICKET_'.$this->appid;
+    	if($this->valid()){
+            $data = $this->getRev()->getRevData();
+            $this->verify_ticket = $data['ComponentVerifyTicket'];
+            $this->setCache($CACHE_KEY, $data['ComponentVerifyTicket']);
+            return $data;
+        }
+        return false;
+    }
+
+    /**
+	 * 获取第三方平台component_access_token
+	 */
+	public function checkAuth(){
+		$authname = 'WXBIZ_ACCESS_TOKEN_'.$this->appid;
+		if ($rs = $this->getCache($authname))  {
+			$this->access_token = $rs;
+			return $rs;
+		}
+
+		// 根据
+		$verify_ticket = $this->getCache('WXBIZ_VERIFY_TICKET_'.$this->appid);
+		if(!$verify_ticket){
+			die('compontent access ticket not found!');
+		}
+		
+		$url = self::API_URL_PREFIX.self::COMPONENT_API_TOKEN;
+		$params = array('component_appid'=> $this->appid, 'component_appsecret'=>$this->appsecret, 'component_verify_ticket'=>$verify_ticket);
+		$result = $this->http_post($url, self::json_encode($params));
+		if ($result){
+			$json = json_decode($result, true);
+			if (!$json || isset($json['errcode'])) {
+				$this->errCode = $json['errcode'];
+				$this->errMsg = $json['errmsg'];
+				return false;
+			}
+			$this->access_token = $json['component_access_token'];
+			$expire = $json['expires_in'] ? intval($json['expires_in'])-600 : 3600;
+			$this->setCache($authname, $this->access_token, $expire);
+			return $this->access_token;
+		}
+		return false;
+	}
+
+	/**
+	 * 获取预授权码
+	 *
+	 * 此接口在公众号运营者准备授权第三方时调用
+	 * @return [type] [description]
+	 */
+	public function getPreAuthCode(){
+		if (!$this->access_token && !$this->checkAuth()) return false;
+
+		$authcode = 'WXBIZ_PRE_AUTHCODE_'.$this->appid;
+		if ($rs = $this->getCache($authcode))  {
+			$this->pre_auth_code = $rs;
+			return $rs;
+		}
+
+		$url = self::API_URL_PREFIX.self::COMPONENT_API_PRE_CODE.'component_access_token='.$this->access_token;
+		$params = array('component_appid'=>$this->appid);
+		$result = $this->http_post($url, self::json_encode($params));
+		if ($result){
+			$json = json_decode($result, true);
+			if (!$json || isset($json['errcode'])) {
+				$this->errCode = $json['errcode'];
+				$this->errMsg = $json['errmsg'];
+				return false;
+			}
+			$this->pre_auth_code = $json['pre_auth_code'];
+			$expire = $json['expires_in'] ? intval($json['expires_in'])-200 : 1000;
+			$this->setCache($authcode, $this->pre_auth_code, $expire);
+			return $this->pre_auth_code;
+		}
+		return false;
+	}
+
+	/**
+	 * 获取公众号授权页面地址
+	 *
+	 * 此接口在公众号运营者准备授权第三方时调用，引导用户前往此URL进行授权
+	 * @param  string $redirect_uri 微信授权URL
+	 * @return
+	 */
+	public function getGrantUrl($redirect_uri=''){
+		if($pre_auth_code = $this->getPreAuthCode()){
+			return self::MP_URL_PREFIX.self::COMPONENT_GRANT_URL."component_appid={$this->appid}&pre_auth_code={$pre_auth_code}&redirect_uri={$redirect_uri}";
+		}
+		return false;
+	}
+
+	/**
+	 * 使用授权码换取公众号的接口调用凭据和授权信息
+	 *
+	 * 此接口在运营者在微信授权成功后，检查并获得授权码
+	 * @return [type] [description]
+	 */
+	public function getAuthorization($auth_code='', $expires_in=''){
+		if (!$this->access_token && !$this->checkAuth()) return false;
+		$url = self::API_URL_PREFIX.self::COMPONENT_API_AUTH.'component_access_token='.$this->access_token;
+		$params = array('component_appid'=>$this->appid, 'authorization_code'=>$auth_code);
+		$result = $this->http_post($url, self::json_encode($params));
+		if ($result){
+			$json = json_decode($result, true);
+			if (!$json || isset($json['errcode'])) {
+				$this->errCode = $json['errcode'];
+				$this->errMsg = $json['errmsg'];
+				return false;
+			}
+			$this->authorizer_appid = $json['authorization_info']['authorizer_appid'];
+			$this->authorizer_access_token = $json['authorization_info']['authorizer_access_token'];
+			$expires_in = $json['authorization_info']['expires_in'];
+
+			$this->setCache('AUTHORIZER_ACCESS_TOKEN_'.$this->authorizer_appid, $this->authorizer_access_token, $expires_in);
+			return $json['authorization_info'];
+		}
+		return false;
+	}
+
+	/**
+	 * 根据已授权微信公众号APP ID，获取公众号基本信息
+	 *
+	 * 此接口在需要获取已授权公众号信息时调用
+	 * @param  string $authorizer_appid 已授权公众号APP ID
+	 * @return array                   	公众号授权信息
+	 */
+	public function getAuthorizerInfo($authorizer_appid=''){
+		if (!$this->access_token && !$this->checkAuth()) return false;
+		
+		$url = self::API_URL_PREFIX.self::COMPONENT_API_AUTH_INFO.'component_access_token='.$this->access_token;
+		$params = array('component_appid'=>$this->appid, 'authorizer_appid'=>$authorizer_appid);
+		$result = $this->http_post($url, self::json_encode($params));
+		if ($result){
+			$json = json_decode($result, true);
+			if (!$json || isset($json['errcode'])) {
+				$this->errCode = $json['errcode'];
+				$this->errMsg = $json['errmsg'];
+				return false;
+			}
+			return $json;
+		}
+	}
+
+	/**
+	 * 获取授权方选项设置信息
+	 * @param  string $option_name 选项,location_report:地理位置上报,voice_recognize:语音识别开关,customer_service:多客服开关
+	 * @return             
+	 */
+	public function getAuthorizerOption($authorizer_appid='', $option_name=''){
+		if (!$this->access_token && !$this->checkAuth()) return false;
+		
+		$url = self::API_URL_PREFIX.self::COMPONENT_API_AUTH_OPTION.'component_access_token='.$this->access_token;
+		$params = array('component_appid'=>$this->appid, 'authorizer_appid'=>$authorizer_appid, 'option_name'=>$option_name);
+		$result = $this->http_post($url, self::json_encode($params));
+
+		if ($result){
+			$json = json_decode($result, true);
+			if (!$json || isset($json['errcode'])) {
+				$this->errCode = $json['errcode'];
+				$this->errMsg = $json['errmsg'];
+				return false;
+			}
+			return $json;
+		}
+		return false;
+	}
+
+
+    /**
+     * 获取微信服务器发来的信息
+     */
+	public function getRev(){
+		if ($this->_receive) return $this;
+		$postStr = !empty($this->postxml)?$this->postxml:file_get_contents("php://input");
+		//兼顾使用明文又不想调用valid()方法的情况
+		$this->log($postStr);
+		if (!empty($postStr)) {
+			$this->_receive = (array)simplexml_load_string($postStr, 'SimpleXMLElement', LIBXML_NOCDATA);
+		}
+		return $this;
+	}
+
+	/**
+	 * 获取微信服务器发来的信息
+	 */
+	public function getRevData(){
+		return $this->_receive;
+	}
+
+	/**
+	 * 获取微信服务器发来的原始加密信息
+	 */
+	public function getRevPostXml(){
+	    return $this->postxml;
+	}
+
+   	/**
+	 * 设置缓存，按需重载
+	 * @param string $cachename
+	 * @param mixed $value
+	 * @param int $expired
+	 * @return boolean
+	 */
+	protected function setCache($cachename,$value,$expired){
+		//TODO: set cache implementation
+		return false;
+	}
+
+	/**
+	 * 获取缓存，按需重载
+	 * @param string $cachename
+	 * @return mixed
+	 */
+	protected function getCache($cachename){
+		//TODO: get cache implementation
+		return false;
+	}
+
+	/**
+	 * 清除缓存，按需重载
+	 * @param string $cachename
+	 * @return boolean
+	 */
+	protected function removeCache($cachename){
+		//TODO: remove cache implementation
+		return false;
+	}
+
+	/**
+	 * 日志记录
+	 */
 	protected function log($log){
 	    if ($this->debug && function_exists($this->logcallback)) {
 	        if (is_array($log)) $log = print_r($log,true);
@@ -155,205 +468,6 @@ class WXBiz{
 		return '{' . $json . '}'; //Return associative JSON
 	}
 
-	/**
-	 * For weixin server validation
-	 */
-	private function checkSignature($encrypt){
-		$msg_signature = isset($_GET["msg_signature"])?$_GET["msg_signature"]:'';
-	    $timestamp = isset($_GET["timestamp"])?$_GET["timestamp"]:'';
-	    $nonce = isset($_GET["nonce"])?$_GET["nonce"]:'';
-	    //验证安全签名
-		$sha1 = new SHA1;
-		$array = $sha1->getSHA1($this->token, $timestamp, $nonce, $encrypt);
-		$ret = $array[0];
-		if ($ret != 0) {
-			return $ret;
-		}
-		$signature = $array[1];
-		if ($signature != $msg_signature) {
-			return false;
-		}
-		return true;
-	}
-
-	/**
-	 * 微信验证，包括post来的xml解密
-	 */
-	public function valid(){
-    	//$postStr = "<xml><AppId><![CDATA[wx6a5c7b3deae109fb]]></AppId><Encrypt><![CDATA[PecTyQvgmdTHFv6WVSm38hZpe6Chhas/Az2pjGsucqrb3WgvujxiviCu4JDwcyTelFJdcPpnLizAN44qyumji8hOeXBoFn5JDexG+LjeLAjKgixi2VkZ/3C21nvaooY+tzYmIYQQUzTFozM1w9BLcEhV9JWOAawiQOQsea4iYsXvPAsujXlgZvGIyZA0VvZY0SDA3oC8T+iw+l3xvkvmIiZeKvNU8z7i+jnECTuwHyAjPrgk7xAHJLtcEWHIIdklG1Qu8Se04tUZxvnDluguhAR1XsOUkl9Mlmt0gwqwrHWrpuWjcllX+WgmUWt16oDAczWklkmOJiKPoPom8GB87GXQuD35xE6p7YKsETeXMqtpfCmb4lPlJU8ypkuuaQ+nLODOb5+/MtSfuYmDj+BDprLNcDgAOPLCOvRXJdbTLS3xQnWai5ZO7s7mkl7OV22coyqd73HX44/qTjuHkmlvfw==]]></Encrypt></xml>";
-		if ($_SERVER['REQUEST_METHOD'] == "POST" || true) {
-            $postStr = file_get_contents("php://input");
-            $array = (array)simplexml_load_string($postStr, 'SimpleXMLElement', LIBXML_NOCDATA);
-            $this->encrypt_type = isset($_GET["encrypt_type"]) ? $_GET["encrypt_type"]: '';
-            if ($this->encrypt_type == 'aes') { //aes加密
-                $this->log($postStr);
-            	$encryptStr = $array['Encrypt'];
-            	$pc = new Prpcrypt($this->encodingAesKey);
-            	$array = $pc->decrypt($encryptStr,$this->appid);
-            	if (!isset($array[0]) || ($array[0] != 0)) {
-            	    die('decrypt error!');
-            	}
-            	$this->postxml = $array[1];
-            } else {
-                $this->postxml = $postStr;
-            }
-
-            if (!$this->checkSignature($encryptStr)) {
-        		die('no access');
-        	}
-        	return true;
-        }
-    }
-
-    /**
-     * 更新并缓存第三方调用verify ticket
-     * @return bool
-     */
-    public function checkTicket(){
-    	$CACHE_KEY = 'WXBIZ_VERIFY_TICKET_'.$this->appid;
-    	if($this->valid()){
-            $data = $this->getRev()->getRevData();
-            $this->verify_ticket = $data['ComponentVerifyTicket'];
-            $this->setCache($CACHE_KEY, $data['ComponentVerifyTicket']);
-            return $data;
-        }
-        return false;
-    }
-
-
-    /**
-	 * 获取access_token
-	 */
-	public function checkAuth(){
-		$authname = 'WXBIZ_ACCESS_TOKEN_'.$this->appid;
-		if ($rs = $this->getCache($authname))  {
-			$this->access_token = $rs;
-			return $rs;
-		}
-
-		$verify_ticket = $this->getCache('WXBIZ_VERIFY_TICKET_'.$this->appid);
-		if(!$verify_ticket){
-			die('no compontent access ticket!');
-		}
-		
-		$url = self::API_URL_PREFIX.self::COMPONENT_API_TOKEN;
-		$params = array('component_appid'=> $this->appid, 'component_appsecret'=>$this->appsecret, 'component_verify_ticket'=>$verify_ticket);
-		$result = $this->http_post($url, self::json_encode($params));
-		if ($result){
-			$json = json_decode($result, true);
-			if (!$json || isset($json['errcode'])) {
-				$this->errCode = $json['errcode'];
-				$this->errMsg = $json['errmsg'];
-				return false;
-			}
-			$this->access_token = $json['component_access_token'];
-			$expire = $json['expires_in'] ? intval($json['expires_in'])-600 : 3600;
-			$this->setCache($authname, $this->access_token, $expire);
-			return $this->access_token;
-		}
-		return false;
-	}
-
-	/**
-	 * 获取预授权码
-	 * @return [type] [description]
-	 */
-	public function getPreAuthCode(){
-		if (!$this->access_token && !$this->checkAuth()) return false;
-
-		$authcode = 'WXBIZ_PRE_AUTHCODE_'.$this->appid;
-		if ($rs = $this->getCache($authcode))  {
-			$this->pre_auth_code = $rs;
-			return $rs;
-		}
-
-		$url = self::API_URL_PREFIX.self::COMPONENT_PRE_AUTHCODE.'component_access_token='.$this->access_token;
-		$params = array('component_appid'=>$this->appid);
-		$result = $this->http_post($url, self::json_encode($params));
-		if ($result){
-			$json = json_decode($result, true);
-			if (!$json || isset($json['errcode'])) {
-				$this->errCode = $json['errcode'];
-				$this->errMsg = $json['errmsg'];
-				return false;
-			}
-			$this->pre_auth_code = $json['pre_auth_code'];
-			$expire = $json['expires_in'] ? intval($json['expires_in'])-200 : 1000;
-			$this->setCache($authcode, $this->pre_auth_code, $expire);
-			return $this->pre_auth_code;
-		}
-		return false;
-	}
-
-	/**
-	 * 获取公众号授权页面地址
-	 * @param  string $redirect_uri [description]
-	 * @return [type]               [description]
-	 */
-	public function getGrantUrl($redirect_uri=''){
-		if($pre_auth_code = $this->getPreAuthCode()){
-			return self::MP_URL_PREFIX.self::COMPONENT_GRANT_URL."component_appid={$this->appid}&pre_auth_code={$pre_auth_code}&redirect_uri={$redirect_uri}";
-		}
-		return false;
-	}	
-
-    /**
-     * 获取微信服务器发来的信息
-     */
-	public function getRev(){
-		if ($this->_receive) return $this;
-		$postStr = !empty($this->postxml)?$this->postxml:file_get_contents("php://input");
-		//兼顾使用明文又不想调用valid()方法的情况
-		$this->log($postStr);
-		if (!empty($postStr)) {
-			$this->_receive = (array)simplexml_load_string($postStr, 'SimpleXMLElement', LIBXML_NOCDATA);
-		}
-		return $this;
-	}
-
-	/**
-	 * 获取微信服务器发来的信息
-	 */
-	public function getRevData(){
-		return $this->_receive;
-	}
-
-	/**
-	 * 获取微信服务器发来的原始加密信息
-	 */
-	public function getRevPostXml(){
-	    return $this->postxml;
-	}
-
-   	/**
-	 * 设置缓存，按需重载
-	 * @param string $cachename
-	 * @param mixed $value
-	 * @param int $expired
-	 * @return boolean
-	 */
-	protected function setCache($cachename,$value,$expired){
-		//TODO: set cache implementation
-		return false;
-	}
-	/**
-	 * 获取缓存，按需重载
-	 * @param string $cachename
-	 * @return mixed
-	 */
-	protected function getCache($cachename){
-		//TODO: get cache implementation
-		return false;
-	}
-	/**
-	 * 清除缓存，按需重载
-	 * @param string $cachename
-	 * @return boolean
-	 */
-	protected function removeCache($cachename){
-		//TODO: remove cache implementation
-		return false;
-	}
 }
 
 
@@ -362,8 +476,7 @@ class WXBiz{
  *
  * 计算公众平台的消息签名接口.
  */
-class SHA1
-{
+class SHA1{
 	/**
 	 * 用SHA1算法生成安全签名
 	 * @param string $token 票据
@@ -391,16 +504,14 @@ class SHA1
  *
  * 提供基于PKCS7算法的加解密接口.
  */
-class PKCS7Encoder
-{
+class PKCS7Encoder{
     public static $block_size = 32;
     /**
      * 对需要加密的明文进行填充补位
      * @param $text 需要进行填充补位操作的明文
      * @return 补齐明文字符串
      */
-    function encode($text)
-    {
+    function encode($text){
         $block_size = PKCS7Encoder::$block_size;
         $text_length = strlen($text);
         //计算需要填充的位数
@@ -436,8 +547,7 @@ class PKCS7Encoder
  *
  * 提供接收和推送给公众平台消息的加解密接口.
  */
-class Prpcrypt
-{
+class Prpcrypt{
     public $key;
     function __construct($k) {
         $this->key = base64_decode($k . "=");
@@ -445,8 +555,7 @@ class Prpcrypt
     /**
      * 兼容老版本php构造函数，不能在 __construct() 方法前边，否则报错
      */
-    function Prpcrypt($k)
-    {
+    function Prpcrypt($k){
         $this->key = base64_decode($k . "=");
     }
     /**
@@ -454,8 +563,7 @@ class Prpcrypt
      * @param string $text 需要加密的明文
      * @return string 加密后的密文
      */
-    public function encrypt($text, $appid)
-    {
+    public function encrypt($text, $appid){
         try {
             //获得16位随机字符串，填充到明文之前
             $random = $this->getRandomStr();//"aaaabbbbccccdddd";
@@ -485,8 +593,7 @@ class Prpcrypt
      * @param string $encrypted 需要解密的密文
      * @return string 解密得到的明文
      */
-    public function decrypt($encrypted, $appid)
-    {
+    public function decrypt($encrypted, $appid){
         try {
             //使用BASE64对需要解密的字符串进行解码
             $ciphertext_dec = base64_decode($encrypted);
@@ -524,8 +631,7 @@ class Prpcrypt
      * 随机生成16位字符串
      * @return string 生成的字符串
      */
-    function getRandomStr()
-    {
+    function getRandomStr(){
         $str = "";
         $str_pol = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyz";
         $max = strlen($str_pol) - 1;
@@ -552,8 +658,7 @@ class Prpcrypt
  *    <li>-40011: 生成xml失败</li>
  * </ul>
  */
-class ErrorCode
-{
+class ErrorCode{
 	public static $OK = 0;
 	public static $ValidateSignatureError = -40001;
 	public static $ParseXmlError = -40002;
