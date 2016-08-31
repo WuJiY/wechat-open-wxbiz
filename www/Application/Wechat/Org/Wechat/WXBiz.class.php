@@ -47,11 +47,8 @@ class WXBiz{
 	 */
 	public function valid(){
 		if ($_SERVER['REQUEST_METHOD'] == "POST" || true) {
-            //$postStr = file_get_contents("php://input");
-			$postStr = '<xml><ToUserName><![CDATA[gh_7d2bd24b4d3b]]></ToUserName><Encrypt><![CDATA[PbkcmMHrikbuopqZFQqWLnYLxzVwyAdTv2L6dA2CGz5HdHhFm8Qt0AztIug8h3R0ovwFWCIBjVqZnHd5Psv7aprHiRtFnkohHCYj1fdass6dZEu9Lx4AvmDAavq72CqRf2GuSShVqifIz+ENVewyyHEH6FsLzwkHiJCK1Olcnn7K7057SeIx8UzCt+sy5zovPtiD3rPpDMaInPMvGOUiZEQqQxwyZiB+wp+mdIHUiV77XiNt0u+kz3EERefNk9MOfSeYo+uuWUJOJ8imk+sp8gmZ4x9BvlNPQdnJXcd+4RRY8BsZdaIQuqUNDuTJa+PT90fze6kxvYuujDi2twcy67lseorze5I9D8Pv0qVkPxgWig6f7i3owlcHyqi4Pgzly2uuA2AwDnGZob+DibPLkQ/Xa2gydDhgP3XmHO+uZhE=]]></Encrypt></xml>';
-
-
-            $array = (array)simplexml_load_string($postStr, 'SimpleXMLElement', LIBXML_NOCDATA);
+            $postStr = file_get_contents("php://input");
+			$array = (array)simplexml_load_string($postStr, 'SimpleXMLElement', LIBXML_NOCDATA);
             $this->encrypt_type = isset($_GET["encrypt_type"]) ? $_GET["encrypt_type"]: '';
             if ($this->encrypt_type == 'aes') { //aes加密
                 $this->log($postStr);

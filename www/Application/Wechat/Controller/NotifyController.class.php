@@ -108,7 +108,7 @@ class NotifyController extends Controller {
 
         if($this->client->valid()){
             $data = $this->client->getRev()->getRevData();
-            switch($data[''])
+            //switch($data[''])
 
             echo 'SUCCESS';
         }else{
