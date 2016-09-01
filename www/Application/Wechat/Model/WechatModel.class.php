@@ -65,7 +65,7 @@ class WechatModel extends Model
      * @param  string $status 状态， 1：已授权,0:未授权
      */
     public function updateAuthorizeStatus($appid='', $status='1'){
-        if($id = $this->where('appid'=>$appid)->getField('id')){
+        if($id = $this->where(array('appid'=>$appid))->getField('id')){
             $this->update(array('id'=>$id, 'status'=>$status));
         }
     }
