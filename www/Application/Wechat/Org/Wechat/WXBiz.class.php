@@ -102,7 +102,7 @@ class WXBiz{
     	if($this->valid()){
             $data = $this->getRev()->getRevData();
             $this->verify_ticket = $data['ComponentVerifyTicket'];
-            $this->setCache($CACHE_KEY, $data['ComponentVerifyTicket']);
+            $this->setCache($CACHE_KEY, $data['ComponentVerifyTicket'], 3600);
             return $data;
         }
         return false;

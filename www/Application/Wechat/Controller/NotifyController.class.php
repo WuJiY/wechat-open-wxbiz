@@ -46,9 +46,10 @@ class NotifyController extends Controller {
     	if($data = $this->client->checkTicket()){
             @file_put_contents(RUNTIME_PATH."wechat_authorization_decrypt.xml", $this->client->getRevPostXml());
 
-            // TODO: 检查并 开启/关闭 授权状态
-            $status = $data['InfoType'] == 'unauthorized' ? 0 : 1;
-            D('Wechat')->updateAuthorizeStatus($data['AppId'], $status);
+            // TODO: 检查并关闭该公众号授权状态
+            if($data['InfoType'] == 'unauthorized'){
+                D('Wechat')->updateAuthorizeStatus($data['AuthorizerAppid'], 0);
+            }
             
             echo 'SUCCESS';
         }else{
@@ -67,6 +68,7 @@ class NotifyController extends Controller {
             $data = array(
                 'appid'             => $authorization_info['authorizer_appid'],
                 'refresh_token'     => $authorization_info['authorizer_refresh_token'],
+                'status'            => 1
             );
             
             // 获取公众号基本信息

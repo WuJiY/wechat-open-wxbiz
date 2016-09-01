@@ -27,7 +27,7 @@ class TPWXBiz extends WXBiz
      * @param int $expired
      * @return boolean
      */
-    protected function setCache($cachename,$value,$expired){
+    protected function setCache($cachename,$value,$expired=3600){
         return S($cachename,$value,$expired);
     }
 
