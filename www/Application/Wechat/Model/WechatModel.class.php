@@ -58,4 +58,15 @@ class WechatModel extends Model
         //内容添加或更新完成
         return $data;
     }
+
+    /**
+     * 设置公众号授权状态
+     * @param  string $appid  公众号ID
+     * @param  string $status 状态， 1：已授权,0:未授权
+     */
+    public function updateAuthorizeStatus($appid='', $status='1'){
+        if($id = $this->where('appid'=>$appid)->getField('id')){
+            $this->update(array('id'=>$id, 'status'=>$status));
+        }
+    }
 }

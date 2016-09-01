@@ -16,11 +16,14 @@ class NotifyController extends Controller {
 
     public function index(){
         $redirect_url = $this->client->getGrantUrl("http://wx.wecook.cn/notify/grant");
-        $this->show("<a href='{$redirect_url}'>GRANT</a>", 'utf-8');
+        $this->show("<a href='{$redirect_url}'>Wechat Grunt</a>", 'utf-8');
     }
 
 	/**
 	 * 获取公众号授权
+     * 
+     * POST /notify/authorization?signature=a9256d072c4a98e9afb01905e13c349f03091c78&timestamp=1472651585&nonce=1156671907&encrypt_type=aes&msg_signature=f498865b89a15e55dd0c88273f24bda05eae6f3e
+     * 
         <xml>
             <AppId><![CDATA[wx6a5c7b3deae109fb]]></AppId>
             <CreateTime>1472650983</CreateTime>
@@ -42,6 +45,11 @@ class NotifyController extends Controller {
 
     	if($data = $this->client->checkTicket()){
             @file_put_contents(RUNTIME_PATH."wechat_authorization_decrypt.xml", $this->client->getRevPostXml());
+
+            // TODO: 检查并 开启/关闭 授权状态
+            $status = $data['InfoType'] == 'unauthorized' ? 0 : 1;
+            D('Wechat')->updateAuthorizeStatus($data['AppId'], $status);
+            
             echo 'SUCCESS';
         }else{
             echo 'FAIL';
@@ -50,6 +58,8 @@ class NotifyController extends Controller {
 
     /**
      * 授权成功回调地址
+     *
+     * GET /notify/grant?auth_code=queryauthcode@@@tKwdwJI35Ulk0r00t4MX2VJ-HZ0rjwx-wXtNkMRKe2eSKZquYzcsTPWF1qUeKkZ6bYd2uN0lM0Je_gT20sZ5jA&expires_in=3600
      */
     public function grant($auth_code='', $expires_in='3600'){
         // 获取授权信息
@@ -103,16 +113,57 @@ class NotifyController extends Controller {
 
     /**
      * 公众号授权事件
-     *
-     * array(6) {
-          ["ToUserName"] => string(15) "gh_7d2bd24b4d3b"
-          ["FromUserName"] => string(28) "owdYLj4vfuMMCcc8ogFqLUFsMCYw"
-          ["CreateTime"] => string(10) "1472647478"
-          ["MsgType"] => string(5) "event"
-          ["Event"] => string(11) "unsubscribe"
-          ["EventKey"] => object(SimpleXMLElement)#8 (0) {
-          }
-        }
+     * 
+     * POST /notify/wx0a73c7ae093b4842/callback?signature=323de029b59fdff88aada25b5c8c2a936287765c&timestamp=1472651721&nonce=1607272680&openid=owdYLj9UVvNI8TIq81rkPA852fdA&encrypt_type=aes&msg_signature=810a4d1ec263ce207b5d9ad0ac61f645a7253712
+     * 
+         <xml>
+            <ToUserName><![CDATA[gh_7d2bd24b4d3b]]></ToUserName>
+            <FromUserName><![CDATA[owdYLj9UVvNI8TIq81rkPA852fdA]]></FromUserName>
+            <CreateTime>1472651721</CreateTime>
+            <MsgType><![CDATA[event]]></MsgType>
+            <Event><![CDATA[subscribe]]></Event>
+            <EventKey><![CDATA[]]></EventKey>
+        </xml>
+
+        <xml>
+            <ToUserName><![CDATA[gh_7d2bd24b4d3b]]></ToUserName>
+            <FromUserName><![CDATA[owdYLj9UVvNI8TIq81rkPA852fdA]]></FromUserName>
+            <CreateTime>1472651663</CreateTime>
+            <MsgType><![CDATA[event]]></MsgType>
+            <Event><![CDATA[unsubscribe]]></Event>
+            <EventKey><![CDATA[]]></EventKey>
+        </xml>
+
+
+        <xml>
+            <ToUserName><![CDATA[gh_7d2bd24b4d3b]]></ToUserName>
+            <FromUserName><![CDATA[owdYLj9UVvNI8TIq81rkPA852fdA]]></FromUserName>
+            <CreateTime>1472651566</CreateTime>
+            <MsgType><![CDATA[text]]></MsgType>
+            <Content><![CDATA[Hello]]></Content>
+            <MsgId>6324990314820393100</MsgId>
+        </xml>
+
+        <xml>
+            <ToUserName><![CDATA[gh_7d2bd24b4d3b]]></ToUserName>
+            <FromUserName><![CDATA[owdYLj9UVvNI8TIq81rkPA852fdA]]></FromUserName>
+            <CreateTime>1472652104</CreateTime>
+            <MsgType><![CDATA[event]]></MsgType>
+            <Event><![CDATA[LOCATION]]></Event>
+            <Latitude>39.980888</Latitude>
+            <Longitude>116.300865</Longitude>
+            <Precision>65.000000</Precision>
+        </xml>
+
+        <xml>
+            <ToUserName><![CDATA[gh_7d2bd24b4d3b]]></ToUserName>
+            <FromUserName><![CDATA[owdYLj9UVvNI8TIq81rkPA852fdA]]></FromUserName>
+            <CreateTime>1472652641</CreateTime>
+            <MsgType><![CDATA[event]]></MsgType>
+            <Event><![CDATA[VIEW]]></Event>
+            <EventKey><![CDATA[http://m.wecook.cn/?src=caipudaquan]]></EventKey>
+            <MenuId>206031589</MenuId>
+        </xml>
      * 
      * @param  string $app_id [description]
      * @return [type]         [description]
@@ -123,7 +174,7 @@ class NotifyController extends Controller {
             @file_put_contents(RUNTIME_PATH."wechat_events_{$app_id}_decrypt.xml", $this->client->getRevPostXml());
 
             $data = $this->client->getRev()->getRevData();
-
+            // TODO:检查并处理该公众号用户操作事件
             //switch($data[''])
 
             echo 'SUCCESS';
@@ -132,16 +183,6 @@ class NotifyController extends Controller {
         }
     }
 
-
-    /**
-	 * 获取公众号授权
-	 * @return [type] [description]
-	 */
-    public function ticket(){
-    	@file_put_contents(RUNTIME_PATH.'wechat_ticket.xml', @file_get_contents("php://input"));
-
-    	echo 'SUCCESS';
-    }
 
 
     public function test(){
