@@ -46,11 +46,9 @@ class NotifyController extends Controller {
     	if($data = $this->client->checkTicket()){
             @file_put_contents(RUNTIME_PATH."wechat_authorization_decrypt.xml", $this->client->getRevPostXml());
 
-            // TODO: 检查并关闭该公众号授权状态
             if($data['InfoType'] == 'unauthorized'){
                 D('Wechat')->updateAuthorizeStatus($data['AuthorizerAppid'], 0);
             }
-            
             echo 'SUCCESS';
         }else{
             echo 'FAIL';
@@ -136,7 +134,6 @@ class NotifyController extends Controller {
             <EventKey><![CDATA[]]></EventKey>
         </xml>
 
-
         <xml>
             <ToUserName><![CDATA[gh_7d2bd24b4d3b]]></ToUserName>
             <FromUserName><![CDATA[owdYLj9UVvNI8TIq81rkPA852fdA]]></FromUserName>
@@ -187,7 +184,18 @@ class NotifyController extends Controller {
 
 
 
-    public function test(){
+    public function getAuthorizerAccessToken(){
+        $appid          = 'wx0a73c7ae093b4842';
+        $refresh_token  = 'refreshtoken@@@agUSmdSjVmu1_AauI6lWOjYkS-mRYULpI7UfXsIJg8s';
+
+        $access_token = $this->client->getAuthorizerAccessToken($appid, $refresh_token);
+
+        
+        dump($access_token);
+        //dump($this->client->errCode.','.$this->client->errMsg);
+    }
+
+    public function getAuthorizerOption(){
         $result = $this->client->getAuthorizerOption('wx0a73c7ae093b4842', 'location_report');
         dump($result);
         //dump($this->client->errCode.','.$this->client->errMsg);

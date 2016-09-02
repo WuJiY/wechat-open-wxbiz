@@ -13,6 +13,7 @@ class WXBiz{
     const COMPONENT_API_TOKEN 		= '/component/api_component_token?';
     const COMPONENT_API_PRE_CODE	= '/component/api_create_preauthcode?';
     const COMPONENT_API_AUTH 		= '/component/api_query_auth?';
+    const COMPONENT_API_AUTH_TOKEN 	= '/component/api_authorizer_token?';
     const COMPONENT_API_AUTH_INFO	= '/component/api_get_authorizer_info?';
     const COMPONENT_API_AUTH_OPTION	= '/component/api_get_authorizer_option?';
     const COMPONENT_GRANT_URL		= '/componentloginpage?';
@@ -265,6 +266,23 @@ class WXBiz{
 		return false;
 	}
 
+	public function getAuthorizerAccessToken($authorizer_appid='', $authorizer_refresh_token=''){
+		if (!$this->access_token && !$this->checkAuth()) return false;
+		
+		$url = self::API_URL_PREFIX.self::COMPONENT_API_AUTH_TOKEN.'component_access_token='.$this->access_token;
+		$params = array('component_appid'=>$this->appid, 'authorizer_appid'=>$authorizer_appid, 'authorizer_refresh_token'=>$authorizer_refresh_token);
+		$result = $this->http_post($url, self::json_encode($params));
+		if ($result){
+			$json = json_decode($result, true);
+			if (!$json || isset($json['errcode'])) {
+				$this->errCode = $json['errcode'];
+				$this->errMsg = $json['errmsg'];
+				return false;
+			}
+			return $json;
+		}
+		return false;
+	}
 
     /**
      * 获取微信服务器发来的信息

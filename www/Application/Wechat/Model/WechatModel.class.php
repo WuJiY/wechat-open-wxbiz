@@ -16,7 +16,7 @@ class WechatModel extends Model
      * 表名
      * @var string
      */
-    protected $trueTableName = 'mk_wechat';
+    protected $trueTableName = 'wc_wechat';
 
     /* 用户模型自动完成 */
     protected $_auto = array(
