@@ -60,8 +60,12 @@ class NotifyController extends Controller {
      * GET /notify/grant?auth_code=queryauthcode@@@tKwdwJI35Ulk0r00t4MX2VJ-HZ0rjwx-wXtNkMRKe2eSKZquYzcsTPWF1qUeKkZ6bYd2uN0lM0Je_gT20sZ5jA&expires_in=3600
      */
     public function grant($auth_code='', $expires_in='3600'){
+        @file_put_contents(RUNTIME_PATH.'wechat_grant.xml', @file_get_contents("php://input"));
+
         // 获取授权信息
         if($authorization_info = $this->client->getAuthorization($auth_code, $expires_in)){
+            @file_put_contents(RUNTIME_PATH.'wechat_grant_decrypt.xml', @json_encode(authorization_info, JSON_UNESCAPED_UNICODE));
+
             $data = array(
                 'appid'             => $authorization_info['authorizer_appid'],
                 'refresh_token'     => $authorization_info['authorizer_refresh_token'],
@@ -86,7 +90,7 @@ class NotifyController extends Controller {
                     'alias'         => (string)$authorizer_info['alias'],
                     'qrcode_url'    => (string)$authorizer_info['qrcode_url'],
                     'func_info'     => (string)implode(",", $this->getFuncInfo($info['authorization_info']['func_info'])),
-                    'business_info' => @json_encode($authorizer_info['business_info'])
+                    'business_info' => @json_encode($authorizer_info['business_info'], JSON_UNESCAPED_UNICODE)
                 ));
             }
 
@@ -162,6 +166,27 @@ class NotifyController extends Controller {
             <EventKey><![CDATA[http://m.wecook.cn/?src=caipudaquan]]></EventKey>
             <MenuId>206031589</MenuId>
         </xml>
+
+        <xml>
+            <ToUserName><![CDATA[gh_7d2bd24b4d3b]]></ToUserName>
+            <FromUserName><![CDATA[owdYLj9UVvNI8TIq81rkPA852fdA]]></FromUserName>
+            <CreateTime>1472790655</CreateTime>
+            <MsgType><![CDATA[event]]></MsgType>
+            <Event><![CDATA[subscribe]]></Event>
+            <EventKey><![CDATA[qrscene_1]]></EventKey>
+            <Ticket><![CDATA[gQGY8DoAAAAAAAAAASxodHRwOi8vd2VpeGluLnFxLmNvbS9xL3RYU2J3eDNsSzR4U2JVakdabGdGAAIEiS62VAMEAAAAAA==]]></Ticket>
+        </xml>
+
+        <xml>
+            <ToUserName><![CDATA[gh_7d2bd24b4d3b]]></ToUserName>
+            <FromUserName><![CDATA[owdYLj9UVvNI8TIq81rkPA852fdA]]></FromUserName>
+            <CreateTime>1472790609</CreateTime>
+            <MsgType><![CDATA[event]]></MsgType>
+            <Event><![CDATA[SCAN]]></Event>
+            <EventKey><![CDATA[1]]></EventKey>
+            <Ticket><![CDATA[gQGY8DoAAAAAAAAAASxodHRwOi8vd2VpeGluLnFxLmNvbS9xL3RYU2J3eDNsSzR4U2JVakdabGdGAAIEiS62VAMEAAAAAA==]]></Ticket>
+        </xml>
+
      * 
      * @param  string $app_id [description]
      * @return [type]         [description]
@@ -173,7 +198,14 @@ class NotifyController extends Controller {
 
             $data = $this->client->getRev()->getRevData();
             // TODO:检查并处理该公众号用户操作事件
-            //switch($data[''])
+            if($data['ToUserName']=='gh_7d2bd24b4d3b' && ($data['Event']=='subscribe' || $data['Event']=='SCAN')){
+
+                $data = array(
+                    'code_id'   => $data['Event']=='SCAN' ? $data['EventKey'] : str_ireplace('qrscene_', '', $data['EventKey']),
+
+                );
+                
+            }
 
             echo 'SUCCESS';
         }else{
@@ -182,8 +214,16 @@ class NotifyController extends Controller {
     }
 
     /**
-     * 获取公众号接口授权
-     * @return [type] [description]
+     * 获取授权公众号参数信息
+     */
+    public function getAuthorizerOption(){
+        $result = $this->client->getAuthorizerOption('wx0a73c7ae093b4842', 'location_report');
+        dump($result);
+        //dump($this->client->errCode.','.$this->client->errMsg);
+    }
+
+    /**
+     * 获取授权公众号接口access token
      */
     public function getAuthorizerAccessToken(){
         $appid          = 'wx0a73c7ae093b4842';
@@ -194,9 +234,28 @@ class NotifyController extends Controller {
         //dump($this->client->errCode.','.$this->client->errMsg);
     }
 
-    public function getAuthorizerOption(){
-        $result = $this->client->getAuthorizerOption('wx0a73c7ae093b4842', 'location_report');
-        dump($result);
-        //dump($this->client->errCode.','.$this->client->errMsg);
+    /**
+     * 调用公众号接口示例
+     * @return [type] [description]
+     */
+    public function test(){
+        $appid          = 'wx0a73c7ae093b4842';
+        $refresh_token  = 'refreshtoken@@@agUSmdSjVmu1_AauI6lWOjYkS-mRYULpI7UfXsIJg8s';
+
+        $access_token = $this->client->getAuthorizerAccessToken($appid, $refresh_token);
+
+
+        import("@.Org.Wechat.TPWechat");
+        $wechat = new \TPWechat(array(
+            'token'             => 'mwecookcn',
+            'appid'             => 'wx6a5c7b3deae109fb',
+            //'appsecret'         => '5ee42c4df454aa74f652a2b62a13fe96',
+            'encodingaeskey'    => 'XKymxSuMODUKy61arYTdD3BfuZ1SnzSDcXlivVGrPm9',
+        ));
+
+        $wechat->checkAuth('', '', $access_token, 3600);
+        
+        $data = $wechat->getUserList();
+        dump($data);
     }
 }

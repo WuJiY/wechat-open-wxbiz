@@ -41,8 +41,6 @@ class WXBiz{
 		$this->logcallback 		= isset($options['logcallback'])?$options['logcallback']:false;
 	}
 
-
-
 	/**
 	 * 微信验证，POST内容解密
 	 */
@@ -212,7 +210,7 @@ class WXBiz{
 			$this->authorizer_access_token = $json['authorization_info']['authorizer_access_token'];
 			$expires_in = $json['authorization_info']['expires_in'];
 
-			$this->setCache('AUTHORIZER_ACCESS_TOKEN_'.$this->authorizer_appid, $this->authorizer_access_token, $expires_in);
+			$this->setCache('WXBIZ_AUTH_ACCESS_TOKEN_'.$this->authorizer_appid, $this->authorizer_access_token, $expires_in);
 			return $json['authorization_info'];
 		}
 		return false;
@@ -266,8 +264,20 @@ class WXBiz{
 		return false;
 	}
 
+	/**
+	 * 刷新公众号授权接口调用access token
+	 * @param  string $authorizer_appid          授权公众号appid
+	 * @param  string $authorizer_refresh_token  授权公众号refesh token
+	 * @return string                            授权公众号接口调用 access_token
+	 */
 	public function getAuthorizerAccessToken($authorizer_appid='', $authorizer_refresh_token=''){
 		if (!$this->access_token && !$this->checkAuth()) return false;
+
+		$authname = 'WXBIZ_AUTH_ACCESS_TOKEN_'.$authorizer_appid;
+		if ($rs = $this->getCache($authname))  {
+            $this->authorizer_access_token = $rs;
+            return $rs;
+        }
 		
 		$url = self::API_URL_PREFIX.self::COMPONENT_API_AUTH_TOKEN.'component_access_token='.$this->access_token;
 		$params = array('component_appid'=>$this->appid, 'authorizer_appid'=>$authorizer_appid, 'authorizer_refresh_token'=>$authorizer_refresh_token);
@@ -279,7 +289,10 @@ class WXBiz{
 				$this->errMsg = $json['errmsg'];
 				return false;
 			}
-			return $json;
+			$this->authorizer_access_token = $json['authorizer_access_token'];
+            $expire = $json['expires_in'] ? intval($json['expires_in'])-600 : 3600;
+            $this->setCache($authname,$this->authorizer_access_token,$expire);
+			return $json['authorizer_access_token'];
 		}
 		return false;
 	}
