@@ -38,7 +38,6 @@ class NotifyController extends Controller {
             <AuthorizerAppid><![CDATA[wx0a73c7ae093b4842]]></AuthorizerAppid>
         </xml>
      * 
-	 * @return [type] [description]
 	 */
     public function authorization(){
         @file_put_contents(RUNTIME_PATH.'wechat_authorization.xml', @file_get_contents("php://input"));
@@ -182,15 +181,15 @@ class NotifyController extends Controller {
         }
     }
 
-
-
+    /**
+     * 获取公众号接口授权
+     * @return [type] [description]
+     */
     public function getAuthorizerAccessToken(){
         $appid          = 'wx0a73c7ae093b4842';
         $refresh_token  = 'refreshtoken@@@agUSmdSjVmu1_AauI6lWOjYkS-mRYULpI7UfXsIJg8s';
 
         $access_token = $this->client->getAuthorizerAccessToken($appid, $refresh_token);
-
-        
         dump($access_token);
         //dump($this->client->errCode.','.$this->client->errMsg);
     }
