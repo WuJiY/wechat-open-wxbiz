@@ -293,7 +293,7 @@ class NotifyController extends Controller {
      * 调用公众号接口示例
      * @return [type] [description]
      */
-    public function test($wechat_id='10002'){
+    public function getUserList($wechat_id='10002'){
         $wechat = D('Wechat')->getInfo($wechat_id);
         dump($wechat);
         $access_token = $this->client->getAuthorizerAccessToken($wechat['appid'], $wechat['refresh_token']);
@@ -310,6 +310,28 @@ class NotifyController extends Controller {
         $client->checkAuth('', '', $access_token, 3600);
         
         $data = $client->getUserList();
+        dump($data);
+    } 
+
+    /**
+     * 调用公众号接口示例
+     * @return [type] [description]
+     */
+    public function getUserInfo($openid='10002', $openid='owdYLjyJJcEvSPFiIGnYh1xAfCOo'){
+        $wechat = D('Wechat')->getInfo($wechat_id);
+        $access_token = $this->client->getAuthorizerAccessToken($wechat['appid'], $wechat['refresh_token']);
+        
+        import("@.Org.Wechat.TPWechat");
+        $client = new \TPWechat(array(
+            'token'             => 'mwecookcn',
+            'appid'             => $wechat['appid'],
+            //'appsecret'       => '5ee42c4df454aa74f652a2b62a13fe96',
+            'encodingaeskey'    => 'XKymxSuMODUKy61arYTdD3BfuZ1SnzSDcXlivVGrPm9',
+        ));
+
+        $client->checkAuth('', '', $access_token, 3600);
+        
+        $data = $client->getUserInfo($openid);
         dump($data);
     } 
 }
