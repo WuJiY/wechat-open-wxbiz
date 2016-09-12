@@ -319,7 +319,9 @@ class NotifyController extends Controller {
      */
     public function getUserInfo($openid='10002', $openid='owdYLjyJJcEvSPFiIGnYh1xAfCOo'){
         $wechat = D('Wechat')->getInfo($wechat_id);
+        dump($wechat);
         $access_token = $this->client->getAuthorizerAccessToken($wechat['appid'], $wechat['refresh_token']);
+        dump($access_token);
         
         import("@.Org.Wechat.TPWechat");
         $client = new \TPWechat(array(
