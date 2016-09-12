@@ -273,7 +273,7 @@ class NotifyController extends Controller {
      * 获取授权公众号参数信息
      */
     public function getAuthorizerOption($wechat_id='10002'){
-        $wechat = D('Wechat')->getInfo($wecat_id);
+        $wechat = D('Wechat')->getInfo($wechat_id);
         $result = $this->client->getAuthorizerOption($wechat['appid'], 'location_report');
         dump($result);
         //dump($this->client->errCode.','.$this->client->errMsg);
@@ -283,8 +283,8 @@ class NotifyController extends Controller {
      * 获取授权公众号接口access token
      */
     public function getAuthorizerAccessToken($wechat_id='10002'){
-        $wechat = D('Wechat')->getInfo($wecat_id);
-        $access_token = $this->client->getAuthorizerAccessToken($wechat['appid'], $wechat['refresh_token']);
+        $wechat = D('Wechat')->getInfo($wechat_id);
+        $access_token = $this->client->getAuthorizerAccessToken($wechat_id['appid'], $wechat_id['refresh_token']);
         dump($access_token);
         //dump($this->client->errCode.','.$this->client->errMsg);
     }
@@ -294,14 +294,15 @@ class NotifyController extends Controller {
      * @return [type] [description]
      */
     public function test($wechat_id='10002'){
-        $wechat = D('Wechat')->getInfo($wecat_id);
-        $access_token = $this->client->getAuthorizerAccessToken($wechat['appid'], $wechat['refresh_token']);
+        $wechat = D('Wechat')->getInfo($wechat_id);
+        dump($wechat);
+        $access_token = $this->client->getAuthorizerAccessToken($wechat_id['appid'], $wechat_id['refresh_token']);
         dump($access_token);
 
         import("@.Org.Wechat.TPWechat");
         $wechat = new \TPWechat(array(
             'token'             => 'mwecookcn',
-            'appid'             => $wechat['appid'],
+            'appid'             => $wechat_id['appid'],
             //'appsecret'       => '5ee42c4df454aa74f652a2b62a13fe96',
             'encodingaeskey'    => 'XKymxSuMODUKy61arYTdD3BfuZ1SnzSDcXlivVGrPm9',
         ));
