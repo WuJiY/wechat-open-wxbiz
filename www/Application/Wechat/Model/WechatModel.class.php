@@ -69,4 +69,10 @@ class WechatModel extends Model
             $this->update(array('id'=>$id, 'status'=>$status));
         }
     }
+
+    public function getInfo($id){
+        if($id){
+            $this->field('appid,refesh_token')->find($id);
+        }
+    }
 }

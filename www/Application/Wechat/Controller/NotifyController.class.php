@@ -213,7 +213,6 @@ class NotifyController extends Controller {
             //     $sence_id = @str_ireplace('qrscene_', '', $data['EventKey']);
             // }
 
-
             // For publish testing
             if($data['ToUserName'] == $this->test_app_id){
                 $msg = $this->publishTesting($data);
@@ -233,12 +232,14 @@ class NotifyController extends Controller {
      * @return string 
      */
     private function publishTesting($data){
+        // Event testing
         if($data['MsgType']=='event'){
             $msg = $data['Event'].'from_callback';
         }
 
+        // Text testing
         if($data['MsgType']=='text'){
-            if($data['Content']=='TESTCOMPONENT_MSG_TYPE_TEXT'){
+            if(preg_match("/TESTCOMPONENT_MSG_TYPE_TEXT/", $data['Content'])){
                 $msg = 'TESTCOMPONENT_MSG_TYPE_TEXT_callback';
             }
 
@@ -271,8 +272,9 @@ class NotifyController extends Controller {
     /**
      * 获取授权公众号参数信息
      */
-    public function getAuthorizerOption(){
-        $result = $this->client->getAuthorizerOption('wx0a73c7ae093b4842', 'location_report');
+    public function getAuthorizerOption($wechat_id='10002'){
+        $wechat = D('Wechat')->getInfo($wecat_id);
+        $result = $this->client->getAuthorizerOption($wechat['appid'], 'location_report');
         dump($result);
         //dump($this->client->errCode.','.$this->client->errMsg);
     }
@@ -280,11 +282,9 @@ class NotifyController extends Controller {
     /**
      * 获取授权公众号接口access token
      */
-    public function getAuthorizerAccessToken(){
-        $appid          = 'wx0a73c7ae093b4842';
-        $refresh_token  = 'refreshtoken@@@agUSmdSjVmu1_AauI6lWOjYkS-mRYULpI7UfXsIJg8s';
-
-        $access_token = $this->client->getAuthorizerAccessToken($appid, $refresh_token);
+    public function getAuthorizerAccessToken($wechat_id='10002'){
+        $wechat = D('Wechat')->getInfo($wecat_id);
+        $access_token = $this->client->getAuthorizerAccessToken($wechat['appid'], $wechat['refresh_token']);
         dump($access_token);
         //dump($this->client->errCode.','.$this->client->errMsg);
     }
@@ -293,11 +293,9 @@ class NotifyController extends Controller {
      * 调用公众号接口示例
      * @return [type] [description]
      */
-    public function test(){
-        $appid          = 'wx0a73c7ae093b4842';
-        $refresh_token  = 'refreshtoken@@@agUSmdSjVmu1_AauI6lWOjYkS-mRYULpI7UfXsIJg8s';
-
-        $access_token = $this->client->getAuthorizerAccessToken($appid, $refresh_token);
+    public function test($wechat_id='10002'){
+        $wechat = D('Wechat')->getInfo($wecat_id);
+        $access_token = $this->client->getAuthorizerAccessToken($wechat['appid'], $wechat['refresh_token']);
 
 
         import("@.Org.Wechat.TPWechat");
@@ -313,10 +311,4 @@ class NotifyController extends Controller {
         $data = $wechat->getUserList();
         dump($data);
     } 
-
-    public function test1(){
-        $query_auth_code = "queryauthcode@@@0YO62aKM68PVEG7oKtD6pjMZIvX15r-27PUYrWXoYvT1PaxAUiZW_dUYpppoQ5FEZ0Yh0R2Y0pROG_m55NuvtQ";
-        $auth = $this->client->getAuthorization($query_auth_code);
-        dump($auth);
-    }
 }
