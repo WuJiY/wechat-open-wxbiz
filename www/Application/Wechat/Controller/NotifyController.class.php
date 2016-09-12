@@ -317,11 +317,9 @@ class NotifyController extends Controller {
      * 调用公众号接口示例
      * @return [type] [description]
      */
-    public function getUserInfo($openid='10002', $openid='owdYLjyJJcEvSPFiIGnYh1xAfCOo'){
+    public function getUserInfo($wechat_id='10002', $openid='owdYLjyJJcEvSPFiIGnYh1xAfCOo'){
         $wechat = D('Wechat')->getInfo($wechat_id);
-        dump($wechat);
         $access_token = $this->client->getAuthorizerAccessToken($wechat['appid'], $wechat['refresh_token']);
-        dump($access_token);
         
         import("@.Org.Wechat.TPWechat");
         $client = new \TPWechat(array(
