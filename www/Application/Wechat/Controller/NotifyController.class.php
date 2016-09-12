@@ -199,58 +199,68 @@ class NotifyController extends Controller {
      * @param  string $app_id [description]
      * @return [type]         [description]
      */
-    public function events($app_id=''){
+    public function events($app_id='', $test_app_id='gh_3c884a361561'){
         $time = date('YmdHis', time());
         // @file_put_contents(RUNTIME_PATH."wechat_events_{$app_id}_{$time}.xml", @file_get_contents("php://input"));
         // @file_put_contents(RUNTIME_PATH."wechat_events_{$app_id}_{$time}_url.xml", $_SERVER["REQUEST_URI"]);
         if($this->client->valid()){
             @file_put_contents(RUNTIME_PATH."wechat_events_{$app_id}_{$time}_decrypt.xml", $this->client->getRevPostXml());
             $data = $this->client->getRev()->getRevData();
-            $msg    = "";
+            
             // 检查并记录二维码扫码信息
             // if($data['ToUserName']=='gh_7d2bd24b4d3b' && $data['EventKey'] && ($data['Event']=='subscribe' || $data['Event']=='SCAN')){
             //     $sence_id = @str_ireplace('qrscene_', '', $data['EventKey']);
-                
             // }
 
-            if($data['MsgType']=='event' && $data['ToUserName']=='gh_3c884a361561'){
-                // For publish testing
-                $msg = $data['Event'].'from_callback';
+
+            // For publish testing
+            if($data['ToUserName'] == $test_app_id){
+                $msg = $this->publishTesting($data);
             }
-
-            if($data['MsgType']=='text' && $data['ToUserName']=='gh_3c884a361561'){
-                // For publish testing
-                if($data['Content']=='TESTCOMPONENT_MSG_TYPE_TEXT'){
-                    $msg = 'TESTCOMPONENT_MSG_TYPE_TEXT_callback';
-                }
-
-                // For publish testing
-                if(preg_match("/QUERY_AUTH_CODE/", $data['Content'])){
-                    $query_auth_code = @trim(@str_replace("QUERY_AUTH_CODE:", "", $data['Content']));
-
-                    @file_put_contents(RUNTIME_PATH."wechat_events_{$app_id}_{$time}_auth1.xml", $query_auth_code);
-                    try{
-                        $auth = $this->client->getAuthorization($query_auth_code);
-                    }catch(Exception $e){
-                        @file_put_contents(RUNTIME_PATH."wechat_events_{$app_id}_{$time}_ERR.xml", $e->getMessage());
-                    }
-                    
-                    @file_put_contents(RUNTIME_PATH."wechat_events_{$app_id}_{$time}_auth2.xml", json_encode($auth, JSON_UNESCAPED_UNICODE));
-
-                    import("@.Org.Wechat.TPWechat");
-                    $wechat = new \TPWechat();
-                    $wechat->checkAuth('', '', $auth['authorizer_access_token'], 3600);
-                    $wechat->sendCustomMessage(array(
-                        'touser'    => $data['FromUserName'],
-                        'msgtype'   => 'text',
-                        'text'      => array('content'=>"{$query_auth_code}_from_api")
-                    ));
-                }                
-            }
-
+            
             $this->client->text((string)$msg)->reply();
         }else{
             echo 'FAIL';
+        }
+    }
+
+    /**
+     * 全网发布自动化测试
+     * @param  array $data  推送数据
+     * @return string 
+     */
+    private function publishTesting($data){
+        if($data['MsgType']=='event'){
+            return $data['Event'].'from_callback';
+        }
+
+        if($data['MsgType']=='text'){
+            if($data['Content']=='TESTCOMPONENT_MSG_TYPE_TEXT'){
+                $msg = 'TESTCOMPONENT_MSG_TYPE_TEXT_callback';
+            }
+
+            if(preg_match("/QUERY_AUTH_CODE/", $data['Content'])){
+                $query_auth_code = @trim(@str_replace("QUERY_AUTH_CODE:", "", $data['Content']));
+
+                // @file_put_contents(RUNTIME_PATH."wechat_events_{$app_id}_{$time}_auth1.xml", $query_auth_code);
+                try{
+                    $auth = $this->client->getAuthorization($query_auth_code);
+                }catch(Exception $e){
+                    // @file_put_contents(RUNTIME_PATH."wechat_events_{$app_id}_{$time}_ERR.xml", $e->getMessage());
+                }
+                // @file_put_contents(RUNTIME_PATH."wechat_events_{$app_id}_{$time}_auth2.xml", json_encode($auth, JSON_UNESCAPED_UNICODE));
+
+                import("@.Org.Wechat.TPWechat");
+                $wechat = new \TPWechat();
+                $wechat->checkAuth('', '', $auth['authorizer_access_token'], 3600);
+                $wechat->sendCustomMessage(array(
+                    'touser'    => $data['FromUserName'],
+                    'msgtype'   => 'text',
+                    'text'      => array('content'=>"{$query_auth_code}_from_api")
+                ));
+            }
+
+            return $msg;            
         }
     }
 
