@@ -11,16 +11,16 @@ class NotifyController extends Controller {
      */
     public function _initialize(){
         import("@.Org.Wechat.TPWXBiz");
-        $this->client = new \TPWXBiz(C('WECHAT')); //创建实例对象
+        $this->client = new \TPWXBiz(C('WECHAT_WXBIZ')); //创建实例对象
     }
 
     public function index(){
-        $redirect_url = $this->client->getGrantUrl("http://wx.wecook.cn/notify/grant");
+        $redirect_url = $this->client->getGrantUrl('http://'.$_SERVER["SERVER_NAME"].U('Notify/grant'));
         $this->show("<a href='{$redirect_url}'>Wechat Grunt</a>", 'utf-8');
     }
 
-	/**
-	 * 获取公众号授权
+    /**
+     * 获取公众号授权
      * 
      * POST /notify/authorization?signature=a9256d072c4a98e9afb01905e13c349f03091c78&timestamp=1472651585&nonce=1156671907&encrypt_type=aes&msg_signature=f498865b89a15e55dd0c88273f24bda05eae6f3e
      * 
@@ -38,11 +38,11 @@ class NotifyController extends Controller {
             <AuthorizerAppid><![CDATA[wx0a73c7ae093b4842]]></AuthorizerAppid>
         </xml>
      * 
-	 */
+     */
     public function authorization(){
         @file_put_contents(RUNTIME_PATH.'wechat_authorization.xml', @file_get_contents("php://input"));
 
-    	if($data = $this->client->checkTicket()){
+        if($data = $this->client->checkTicket()){
             @file_put_contents(RUNTIME_PATH."wechat_authorization_decrypt.xml", $this->client->getRevPostXml());
 
             if($data['InfoType'] == 'unauthorized'){
@@ -81,7 +81,7 @@ class NotifyController extends Controller {
 
             if($info = $this->client->getAuthorizerInfo($authorization_info['authorizer_appid'])){
                 $authorizer_info = $info['authorizer_info'];
-                $data = array_merge($data, array(
+                $data = @array_merge($data, array(
                     'nick_name'     => (string)$authorizer_info['nick_name'],
                     'head_img'      => (string)$authorizer_info['head_img'],
                     'service_type'  => (string)$authorizer_info['service_type_info']['id'],
@@ -98,7 +98,6 @@ class NotifyController extends Controller {
                 echo 'GRANT SUCCESS!';
             }else{
                 echo 'GRANT FAIL';
-                dump($model->getLastSql());
             }
         }else{
             echo 'GRANT FAIL, ERROR:'.$this->client->errCode.','.$this->client->errMsg;
@@ -147,6 +146,15 @@ class NotifyController extends Controller {
         </xml>
 
         <xml>
+            <ToUserName><![CDATA[gh_3c884a361561]]></ToUserName>
+            <FromUserName><![CDATA[ozy4qt0Rsc9YJzR5nEeVAaTHg9DQ]]></FromUserName>
+            <CreateTime>1472818491</CreateTime>
+            <MsgType><![CDATA[text]]></MsgType>
+            <Content><![CDATA[QUERY_AUTH_CODE:queryauthcode@@@mLsxqNd9yYHkak0invO_ZTDZ_JnKIDC7LNE0-xR6My7isl15uc_v7E6QWH1f0HIABhwA7AwEduKt-2CayEIvcw]]></Content>
+            <MsgId>6325707252193792008</MsgId>
+        </xml>
+
+        <xml>
             <ToUserName><![CDATA[gh_7d2bd24b4d3b]]></ToUserName>
             <FromUserName><![CDATA[owdYLj9UVvNI8TIq81rkPA852fdA]]></FromUserName>
             <CreateTime>1472652104</CreateTime>
@@ -192,22 +200,56 @@ class NotifyController extends Controller {
      * @return [type]         [description]
      */
     public function events($app_id=''){
-        @file_put_contents(RUNTIME_PATH."wechat_events_{$app_id}.xml", @file_get_contents("php://input"));
+        $time = date('YmdHis', time());
+        @file_put_contents(RUNTIME_PATH."wechat_events_{$app_id}_{$time}.xml", @file_get_contents("php://input"));
+        @file_put_contents(RUNTIME_PATH."wechat_events_{$app_id}_{$time}_url.xml", $_SERVER["REQUEST_URI"]);
         if($this->client->valid()){
-            @file_put_contents(RUNTIME_PATH."wechat_events_{$app_id}_decrypt.xml", $this->client->getRevPostXml());
-
+            @file_put_contents(RUNTIME_PATH."wechat_events_{$app_id}_{$time}_decrypt.xml", $this->client->getRevPostXml());
             $data = $this->client->getRev()->getRevData();
-            // TODO:检查并处理该公众号用户操作事件
-            if($data['ToUserName']=='gh_7d2bd24b4d3b' && ($data['Event']=='subscribe' || $data['Event']=='SCAN')){
-
-                $data = array(
-                    'code_id'   => $data['Event']=='SCAN' ? $data['EventKey'] : str_ireplace('qrscene_', '', $data['EventKey']),
-
-                );
-                
+            // 检查并记录二维码扫码信息
+            if($data['ToUserName']=='gh_7d2bd24b4d3b' && $data['EventKey'] && ($data['Event']=='subscribe' || $data['Event']=='SCAN')){
+                $sence_id = @str_ireplace('qrscene_', '', $data['EventKey']);
+                D('QrcodeRecord')->record($sence_id, $data['FromUserName'], $data['Event']);
             }
 
-            echo 'SUCCESS';
+            if($data['MsgType']=='event'){
+                $this->client->text($data['Event'].'from_callback')->reply();
+            }
+
+            if($data['MsgType']=='text'){
+                $msg = "";
+
+                // 全网发布检测：
+                if($data['Content']=='TESTCOMPONENT_MSG_TYPE_TEXT'){
+                    $msg = 'TESTCOMPONENT_MSG_TYPE_TEXT_callback';
+                }
+
+                /* API对接测试 */
+                if(preg_match("/QUERY_AUTH_CODE/", $data['Content'])){
+                    $query_auth_code = @trim(@str_replace("QUERY_AUTH_CODE:", "", $data['Content']));
+
+                    @file_put_contents(RUNTIME_PATH."wechat_events_{$app_id}_{$time}_auth1.xml", $query_auth_code);
+                    try{
+                        $auth = $this->client->getAuthorization($query_auth_code);
+                    }catch(Exception $e){
+                        @file_put_contents(RUNTIME_PATH."wechat_events_{$app_id}_{$time}_ERR.xml", $e->getMessage());
+                    }
+                    
+                    @file_put_contents(RUNTIME_PATH."wechat_events_{$app_id}_{$time}_auth2.xml", json_encode($auth, JSON_UNESCAPED_UNICODE));
+
+                    import("@.Org.Wechat.TPWechat");
+                    $wechat = new \TPWechat();
+                    $wechat->checkAuth('', '', $auth['authorizer_access_token'], 3600);
+                    $wechat->sendCustomMessage(array(
+                        'touser'    => $data['FromUserName'],
+                        'msgtype'   => 'text',
+                        'text'      => array('content'=>"{$query_auth_code}_from_api")
+                    ));
+                }
+
+                $this->client->text((string)$msg)->reply();
+            }
+            //echo 'SUCCESS';
         }else{
             echo 'FAIL';
         }
@@ -257,5 +299,11 @@ class NotifyController extends Controller {
         
         $data = $wechat->getUserList();
         dump($data);
+    } 
+
+    public function test1(){
+        $query_auth_code = "queryauthcode@@@0YO62aKM68PVEG7oKtD6pjMZIvX15r-27PUYrWXoYvT1PaxAUiZW_dUYpppoQ5FEZ0Yh0R2Y0pROG_m55NuvtQ";
+        $auth = $this->client->getAuthorization($query_auth_code);
+        dump($auth);
     }
 }

@@ -17,12 +17,15 @@ class WXBiz{
     const COMPONENT_API_AUTH_INFO	= '/component/api_get_authorizer_info?';
     const COMPONENT_API_AUTH_OPTION	= '/component/api_get_authorizer_option?';
     const COMPONENT_GRANT_URL		= '/componentloginpage?';
+
+
+    const MSGTYPE_TEXT = 'text';
+	
     
     private $token;
     private $encodingAesKey;
     private $appid;
     private $appsecret;
-    private $debug;
     private $access_token;
     private $verify_ticket;
     private $pre_auth_code;
@@ -31,6 +34,10 @@ class WXBiz{
     private $postxml;
     private $authorizer_appid;
     private $authorizer_access_token;
+
+    public $debug =  true;
+    private $_funcflag = false;
+    private $_text_filter = true;
 
     public function __construct($options){
 		$this->token 			= isset($options['token'])?$options['token']:'';
@@ -47,6 +54,8 @@ class WXBiz{
 	public function valid(){
 		if ($_SERVER['REQUEST_METHOD'] == "POST" || true) {
             $postStr = file_get_contents("php://input");
+			// $postStr = '<xml><ToUserName><![CDATA[gh_3c884a361561]]></ToUserName><Encrypt><![CDATA[NZc2CSDFHJ7fVvGDGAXnhzjFTgRv8qGA8IC8CCtaKbfVDySwIKLERZfEcHCdTC9KQJ8YaD8t6pRFmaIQXv4mUzjVnRDwT/6YzeJiJlSwURU477hpbhVI3pTs6MVaHr6UbZIhzJUnwCFtKDHahPy+vVhgazugAV308SHngqIFKBK1HqSOqKTRdRMdRMnBHtG0yEZ48weYlMI9TfZpyBG6t8l69V482vaoa1xL9+C5kCzC93lXq84hBfcJ5wMz/vgD7qUiu7g5/Ppq+NajSD44s9Z/T58TLVP0o0JpeJtxxGEuy72krc7OQO6XV034egAdzgMOBLUFDQrkgBJkEVAQ9QNUNcR/WuUG8O3TlGSfmBp3mgcjIUPpdn7G63q73A1FrFi74DUjmBoEN8O99cu4fN+gmPenBYFhvDFpvOTXViFncghbTuQYSxJT2magvvhRwKHAVkXDdKFrRRNSkj1ehhH/t4EWACw4dl3DZREt46j7/ehVqDnoMTScYW4/hfMnMaxHkL4aIB9StLygx9wbYrxqka/0UuuRnLou/+o+A4bBjrtvYjg+qjNdSngxThOKkInH/XKntkkaNTZD1AI//g==]]></Encrypt></xml>';
+
 			$array = (array)simplexml_load_string($postStr, 'SimpleXMLElement', LIBXML_NOCDATA);
             $this->encrypt_type = isset($_GET["encrypt_type"]) ? $_GET["encrypt_type"]: '';
             if ($this->encrypt_type == 'aes') { //aes加密
@@ -55,7 +64,8 @@ class WXBiz{
             	$pc = new Prpcrypt($this->encodingAesKey);
             	$array = $pc->decrypt($encryptStr,$this->appid);
             	if (!isset($array[0]) || ($array[0] != 0)) {
-            	    die('decrypt error!');
+            	    //die('decrypt error!');
+            	    throw new Exception("Message Decrypt error!", 1);
             	}
             	$this->postxml = $array[1];
             } else {
@@ -63,7 +73,8 @@ class WXBiz{
             }
 
             if (!$this->checkSignature($encryptStr)) {
-        		die('signature error!');
+        		//die('signature error!');
+        		throw new Exception("Signature error", 2);
         	}
         	return true;
         }
@@ -100,8 +111,10 @@ class WXBiz{
     	$CACHE_KEY = 'WXBIZ_VERIFY_TICKET_'.$this->appid;
     	if($this->valid()){
             $data = $this->getRev()->getRevData();
-            $this->verify_ticket = $data['ComponentVerifyTicket'];
-            $this->setCache($CACHE_KEY, $data['ComponentVerifyTicket'], 3600);
+            if($data && $data['ComponentVerifyTicket']){
+            	$this->verify_ticket = $data['ComponentVerifyTicket'];
+            	$this->setCache($CACHE_KEY, $data['ComponentVerifyTicket'], 3600);
+            }
             return $data;
         }
         return false;
@@ -120,7 +133,8 @@ class WXBiz{
 		// 根据
 		$verify_ticket = $this->getCache('WXBIZ_VERIFY_TICKET_'.$this->appid);
 		if(!$verify_ticket){
-			die('compontent access ticket not found!');
+			//die('compontent access ticket not found!');
+			throw new Exception("Compontent access ticket not found!", 3);
 		}
 		
 		$url = self::API_URL_PREFIX.self::COMPONENT_API_TOKEN;
@@ -194,11 +208,14 @@ class WXBiz{
 	 * 此接口在运营者在微信授权成功后，检查并获得授权码
 	 * @return [type] [description]
 	 */
-	public function getAuthorization($auth_code='', $expires_in=''){
+	public function getAuthorization($auth_code=''){
 		if (!$this->access_token && !$this->checkAuth()) return false;
 		$url = self::API_URL_PREFIX.self::COMPONENT_API_AUTH.'component_access_token='.$this->access_token;
 		$params = array('component_appid'=>$this->appid, 'authorization_code'=>$auth_code);
+
 		$result = $this->http_post($url, self::json_encode($params));
+		$this->log($result);
+
 		if ($result){
 			$json = json_decode($result, true);
 			if (!$json || isset($json['errcode'])) {
@@ -297,6 +314,99 @@ class WXBiz{
 		return false;
 	}
 
+	/**
+	 * 设置回复消息
+	 * Example: $obj->text('hello')->reply();
+	 * @param string $text
+	 */
+	public function text($text='')
+	{
+		$FuncFlag = $this->_funcflag ? 1 : 0;
+		$msg = array(
+			'ToUserName' => $this->getRevFrom(),
+			'FromUserName'=>$this->getRevTo(),
+			'MsgType'=>self::MSGTYPE_TEXT,
+			'Content'=>$this->_auto_text_filter($text),
+			'CreateTime'=>time(),
+			'FuncFlag'=>$FuncFlag
+		);
+		$this->Message($msg);
+		return $this;
+	}
+
+	/**
+	 *
+	 * 回复微信服务器, 此函数支持链式操作
+	 * Example: $this->text('msg tips')->reply();
+	 * @param string $msg 要发送的信息, 默认取$this->_msg
+	 * @param bool $return 是否返回信息而不抛出到浏览器 默认:否
+	 */
+	public function reply($msg=array(),$return = false)
+	{
+		if (empty($msg)) {
+		    if (empty($this->_msg))   //防止不先设置回复内容，直接调用reply方法导致异常
+		        return false;
+			$msg = $this->_msg;
+		}
+		$xmldata=  $this->xml_encode($msg);
+		$this->log($xmldata);
+		if ($this->encrypt_type == 'aes') { //如果来源消息为加密方式
+		    $pc = new Prpcrypt($this->encodingAesKey);
+		    $array = $pc->encrypt($xmldata, $this->appid);
+		    $ret = $array[0];
+		    if ($ret != 0) {
+		        $this->log('encrypt err!');
+		        return false;
+		    }
+		    $timestamp = time();
+		    $nonce = rand(77,999)*rand(605,888)*rand(11,99);
+		    $encrypt = $array[1];
+		    $tmpArr = array($this->token, $timestamp, $nonce,$encrypt);//比普通公众平台多了一个加密的密文
+		    sort($tmpArr, SORT_STRING);
+		    $signature = implode($tmpArr);
+		    $signature = sha1($signature);
+		    $xmldata = $this->generate($encrypt, $signature, $timestamp, $nonce);
+		    $this->log($xmldata);
+		}
+		if ($return)
+			return $xmldata;
+		else
+			echo $xmldata;
+	}
+
+	/**
+	 * 设置发送消息
+	 * @param array $msg 消息数组
+	 * @param bool $append 是否在原消息数组追加
+	 */
+    public function Message($msg = '',$append = false){
+    		if (is_null($msg)) {
+    			$this->_msg =array();
+    		}elseif (is_array($msg)) {
+    			if ($append)
+    				$this->_msg = array_merge($this->_msg,$msg);
+    			else
+    				$this->_msg = $msg;
+    			return $this->_msg;
+    		} else {
+    			return $this->_msg;
+    		}
+    }
+
+    /**
+     * xml格式加密，仅请求为加密方式时再用
+     */
+	private function generate($encrypt, $signature, $timestamp, $nonce){
+	    //格式化加密信息
+	    $format = "<xml>
+<Encrypt><![CDATA[%s]]></Encrypt>
+<MsgSignature><![CDATA[%s]]></MsgSignature>
+<TimeStamp>%s</TimeStamp>
+<Nonce><![CDATA[%s]]></Nonce>
+</xml>";
+	    return sprintf($format, $encrypt, $signature, $timestamp, $nonce);
+	}
+
     /**
      * 获取微信服务器发来的信息
      */
@@ -323,6 +433,25 @@ class WXBiz{
 	 */
 	public function getRevPostXml(){
 	    return $this->postxml;
+	}
+
+	/**
+	 * 获取消息发送者
+	 */
+	public function getRevFrom() {
+		if (isset($this->_receive['FromUserName']))
+			return $this->_receive['FromUserName'];
+		else
+			return false;
+	}
+	/**
+	 * 获取消息接受者
+	 */
+	public function getRevTo() {
+		if (isset($this->_receive['ToUserName']))
+			return $this->_receive['ToUserName'];
+		else
+			return false;
 	}
 
    	/**
@@ -479,6 +608,64 @@ class WXBiz{
 		return '{' . $json . '}'; //Return associative JSON
 	}
 
+
+	/**
+	 * XML编码
+	 * @param mixed $data 数据
+	 * @param string $root 根节点名
+	 * @param string $item 数字索引的子节点名
+	 * @param string $attr 根节点属性
+	 * @param string $id   数字索引子节点key转换的属性名
+	 * @param string $encoding 数据编码
+	 * @return string
+	*/
+	public function xml_encode($data, $root='xml', $item='item', $attr='', $id='id', $encoding='utf-8') {
+	    if(is_array($attr)){
+	        $_attr = array();
+	        foreach ($attr as $key => $value) {
+	            $_attr[] = "{$key}=\"{$value}\"";
+	        }
+	        $attr = implode(' ', $_attr);
+	    }
+	    $attr   = trim($attr);
+	    $attr   = empty($attr) ? '' : " {$attr}";
+	    $xml   = "<{$root}{$attr}>";
+	    $xml   .= self::data_to_xml($data, $item, $id);
+	    $xml   .= "</{$root}>";
+	    return $xml;
+	}
+
+	/**
+	 * 数据XML编码
+	 * @param mixed $data 数据
+	 * @return string
+	 */
+	public static function data_to_xml($data) {
+	    $xml = '';
+	    foreach ($data as $key => $val) {
+	        is_numeric($key) && $key = "item id=\"$key\"";
+	        $xml    .=  "<$key>";
+	        $xml    .=  ( is_array($val) || is_object($val)) ? self::data_to_xml($val)  : self::xmlSafeStr($val);
+	        list($key, ) = explode(' ', $key);
+	        $xml    .=  "</$key>";
+	    }
+	    return $xml;
+	}
+
+	public static function xmlSafeStr($str){
+		return '<![CDATA['.preg_replace("/[\\x00-\\x08\\x0b-\\x0c\\x0e-\\x1f]/",'',$str).']]>';
+	}
+
+	/**
+	 * 过滤文字回复\r\n换行符
+	 * @param string $text
+	 * @return string|mixed
+	 */
+	private function _auto_text_filter($text) {
+		if (!$this->_text_filter) return $text;
+		return str_replace("\r\n", "\n", $text);
+	}
+	
 }
 
 if(!class_exists("SHA1")){

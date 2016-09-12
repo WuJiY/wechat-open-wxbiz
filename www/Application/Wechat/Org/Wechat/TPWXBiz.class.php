@@ -14,7 +14,7 @@ class TPWXBiz extends WXBiz
                 if (is_array($log)) $log = print_r($log,true);
                 return call_user_func($this->logcallback,$log);
             }elseif (class_exists('Log')) {
-                Log::write('WECHAT: '.$log, Log::DEBUG);
+                Log::write('WECHAT: '.$log, 'INFO');
             }
         }
         return false;
