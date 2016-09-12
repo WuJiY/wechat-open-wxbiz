@@ -201,8 +201,8 @@ class NotifyController extends Controller {
      */
     public function events($app_id=''){
         $time = date('YmdHis', time());
-        @file_put_contents(RUNTIME_PATH."wechat_events_{$app_id}_{$time}.xml", @file_get_contents("php://input"));
-        @file_put_contents(RUNTIME_PATH."wechat_events_{$app_id}_{$time}_url.xml", $_SERVER["REQUEST_URI"]);
+        // @file_put_contents(RUNTIME_PATH."wechat_events_{$app_id}_{$time}.xml", @file_get_contents("php://input"));
+        // @file_put_contents(RUNTIME_PATH."wechat_events_{$app_id}_{$time}_url.xml", $_SERVER["REQUEST_URI"]);
         if($this->client->valid()){
             @file_put_contents(RUNTIME_PATH."wechat_events_{$app_id}_{$time}_decrypt.xml", $this->client->getRevPostXml());
             $data = $this->client->getRev()->getRevData();
@@ -212,12 +212,12 @@ class NotifyController extends Controller {
                 
             // }
 
-            if($data['MsgType']=='event' && $data['ToUserName']=='gh_7d2bd24b4d3b'){
+            if($data['MsgType']=='event' && $data['ToUserName']=='gh_3c884a361561'){
                 // For publish testing
                 $msg = $data['Event'].'from_callback';
             }
 
-            if($data['MsgType']=='text' && $data['ToUserName']=='gh_7d2bd24b4d3b'){
+            if($data['MsgType']=='text' && $data['ToUserName']=='gh_3c884a361561'){
                 // For publish testing
                 if($data['Content']=='TESTCOMPONENT_MSG_TYPE_TEXT'){
                     $msg = 'TESTCOMPONENT_MSG_TYPE_TEXT_callback';
