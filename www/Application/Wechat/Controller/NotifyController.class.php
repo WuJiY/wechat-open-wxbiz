@@ -296,13 +296,13 @@ class NotifyController extends Controller {
     public function test($wechat_id='10002'){
         $wechat = D('Wechat')->getInfo($wecat_id);
         $access_token = $this->client->getAuthorizerAccessToken($wechat['appid'], $wechat['refresh_token']);
-
+        dump($access_token);
 
         import("@.Org.Wechat.TPWechat");
         $wechat = new \TPWechat(array(
             'token'             => 'mwecookcn',
-            'appid'             => 'wx6a5c7b3deae109fb',
-            //'appsecret'         => '5ee42c4df454aa74f652a2b62a13fe96',
+            'appid'             => $wechat['appid'],
+            //'appsecret'       => '5ee42c4df454aa74f652a2b62a13fe96',
             'encodingaeskey'    => 'XKymxSuMODUKy61arYTdD3BfuZ1SnzSDcXlivVGrPm9',
         ));
 
