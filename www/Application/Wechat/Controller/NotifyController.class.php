@@ -206,6 +206,7 @@ class NotifyController extends Controller {
         if($this->client->valid()){
             @file_put_contents(RUNTIME_PATH."wechat_events_{$app_id}_{$time}_decrypt.xml", $this->client->getRevPostXml());
             $data = $this->client->getRev()->getRevData();
+            $msg    = "";
             // 检查并记录二维码扫码信息
             // if($data['ToUserName']=='gh_7d2bd24b4d3b' && $data['EventKey'] && ($data['Event']=='subscribe' || $data['Event']=='SCAN')){
             //     $sence_id = @str_ireplace('qrscene_', '', $data['EventKey']);
