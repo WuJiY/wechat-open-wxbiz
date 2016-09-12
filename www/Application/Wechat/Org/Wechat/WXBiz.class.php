@@ -164,11 +164,11 @@ class WXBiz{
 	public function getPreAuthCode(){
 		if (!$this->access_token && !$this->checkAuth()) return false;
 
-		$authcode = 'WXBIZ_PRE_AUTHCODE_'.$this->appid;
-		if ($rs = $this->getCache($authcode))  {
-			$this->pre_auth_code = $rs;
-			return $rs;
-		}
+		// $authcode = 'WXBIZ_PRE_AUTHCODE_'.$this->appid;
+		// if ($rs = $this->getCache($authcode))  {
+		// 	$this->pre_auth_code = $rs;
+		// 	return $rs;
+		// }
 
 		$url = self::API_URL_PREFIX.self::COMPONENT_API_PRE_CODE.'component_access_token='.$this->access_token;
 		$params = array('component_appid'=>$this->appid);
@@ -180,10 +180,12 @@ class WXBiz{
 				$this->errMsg = $json['errmsg'];
 				return false;
 			}
-			$this->pre_auth_code = $json['pre_auth_code'];
-			$expire = $json['expires_in'] ? intval($json['expires_in'])-200 : 1000;
-			$this->setCache($authcode, $this->pre_auth_code, $expire);
-			return $this->pre_auth_code;
+			// $this->pre_auth_code = $json['pre_auth_code'];
+			// $expire = $json['expires_in'] ? intval($json['expires_in'])-200 : 1000;
+			// $this->setCache($authcode, $this->pre_auth_code, $expire);
+			// return $this->pre_auth_code;
+			
+			return $json['pre_auth_code'];
 		}
 		return false;
 	}
