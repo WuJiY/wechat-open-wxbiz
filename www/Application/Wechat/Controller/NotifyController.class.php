@@ -207,24 +207,23 @@ class NotifyController extends Controller {
             @file_put_contents(RUNTIME_PATH."wechat_events_{$app_id}_{$time}_decrypt.xml", $this->client->getRevPostXml());
             $data = $this->client->getRev()->getRevData();
             // 检查并记录二维码扫码信息
-            if($data['ToUserName']=='gh_7d2bd24b4d3b' && $data['EventKey'] && ($data['Event']=='subscribe' || $data['Event']=='SCAN')){
-                $sence_id = @str_ireplace('qrscene_', '', $data['EventKey']);
-                D('QrcodeRecord')->record($sence_id, $data['FromUserName'], $data['Event']);
+            // if($data['ToUserName']=='gh_7d2bd24b4d3b' && $data['EventKey'] && ($data['Event']=='subscribe' || $data['Event']=='SCAN')){
+            //     $sence_id = @str_ireplace('qrscene_', '', $data['EventKey']);
+                
+            // }
+
+            if($data['MsgType']=='event' && $data['ToUserName']=='gh_7d2bd24b4d3b'){
+                // For publish testing
+                $msg = $data['Event'].'from_callback';
             }
 
-            if($data['MsgType']=='event'){
-                $this->client->text($data['Event'].'from_callback')->reply();
-            }
-
-            if($data['MsgType']=='text'){
-                $msg = "";
-
-                // 全网发布检测：
+            if($data['MsgType']=='text' && $data['ToUserName']=='gh_7d2bd24b4d3b'){
+                // For publish testing
                 if($data['Content']=='TESTCOMPONENT_MSG_TYPE_TEXT'){
                     $msg = 'TESTCOMPONENT_MSG_TYPE_TEXT_callback';
                 }
 
-                /* API对接测试 */
+                // For publish testing
                 if(preg_match("/QUERY_AUTH_CODE/", $data['Content'])){
                     $query_auth_code = @trim(@str_replace("QUERY_AUTH_CODE:", "", $data['Content']));
 
@@ -245,11 +244,10 @@ class NotifyController extends Controller {
                         'msgtype'   => 'text',
                         'text'      => array('content'=>"{$query_auth_code}_from_api")
                     ));
-                }
-
-                $this->client->text((string)$msg)->reply();
+                }                
             }
-            //echo 'SUCCESS';
+
+            $this->client->text((string)$msg)->reply();
         }else{
             echo 'FAIL';
         }
