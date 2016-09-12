@@ -4,7 +4,7 @@ use Think\Controller;
 class NotifyController extends Controller {
 
     private $client;
-    private $test_app_id = 'gh_3c884a361561';
+    private $test_app_id = 'gh_3c884a361561';   // 全网发布测试公众号
 
     /**
      * 引入SDK
@@ -219,7 +219,10 @@ class NotifyController extends Controller {
                 $msg = $this->publishTesting($data);
             }
             
-            $this->client->text((string)$msg)->reply();
+            if($msg){
+                @file_put_contents(RUNTIME_PATH."wechat_events_{$app_id}_{$time}_return.xml", $msg);
+                $this->client->text((string)$msg)->reply();
+            }
         }else{
             echo 'FAIL';
         }
@@ -262,7 +265,7 @@ class NotifyController extends Controller {
             }
         }
 
-        return (string)$msg;  
+        return $msg;  
     }
 
     /**
