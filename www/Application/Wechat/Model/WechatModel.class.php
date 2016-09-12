@@ -72,7 +72,7 @@ class WechatModel extends Model
 
     public function getInfo($id){
         if($id){
-            $this->field('appid,refesh_token')->find($id);
+            $this->field('appid,refresh_token')->find($id);
         }
     }
 }
