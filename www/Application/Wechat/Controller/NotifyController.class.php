@@ -4,6 +4,7 @@ use Think\Controller;
 class NotifyController extends Controller {
 
     private $client;
+    private $test_app_id = 'gh_3c884a361561';
 
     /**
      * 引入SDK
@@ -199,7 +200,7 @@ class NotifyController extends Controller {
      * @param  string $app_id [description]
      * @return [type]         [description]
      */
-    public function events($app_id='', $test_app_id='gh_3c884a361561'){
+    public function events($app_id=''){
         $time = date('YmdHis', time());
         // @file_put_contents(RUNTIME_PATH."wechat_events_{$app_id}_{$time}.xml", @file_get_contents("php://input"));
         // @file_put_contents(RUNTIME_PATH."wechat_events_{$app_id}_{$time}_url.xml", $_SERVER["REQUEST_URI"]);
@@ -214,7 +215,7 @@ class NotifyController extends Controller {
 
 
             // For publish testing
-            if($data['ToUserName'] == $test_app_id){
+            if($data['ToUserName'] == $this->test_app_id){
                 $msg = $this->publishTesting($data);
             }
             
@@ -231,7 +232,7 @@ class NotifyController extends Controller {
      */
     private function publishTesting($data){
         if($data['MsgType']=='event'){
-            return $data['Event'].'from_callback';
+            $msg = $data['Event'].'from_callback';
         }
 
         if($data['MsgType']=='text'){
@@ -259,9 +260,9 @@ class NotifyController extends Controller {
                     'text'      => array('content'=>"{$query_auth_code}_from_api")
                 ));
             }
-
-            return $msg;            
         }
+
+        return (string)$msg;  
     }
 
     /**
