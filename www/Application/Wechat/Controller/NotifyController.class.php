@@ -218,7 +218,7 @@ class NotifyController extends Controller {
                 $msg = $this->publishTesting($data);
             }
             
-            if($msg){
+            if(isset($msg)){
                 $this->client->text((string)$msg)->reply();
             }
         }else{
@@ -284,7 +284,7 @@ class NotifyController extends Controller {
      */
     public function getAuthorizerAccessToken($wechat_id='10002'){
         $wechat = D('Wechat')->getInfo($wechat_id);
-        $access_token = $this->client->getAuthorizerAccessToken($wechat_id['appid'], $wechat_id['refresh_token']);
+        $access_token = $this->client->getAuthorizerAccessToken($wechat['appid'], $wechat['refresh_token']);
         dump($access_token);
         //dump($this->client->errCode.','.$this->client->errMsg);
     }
@@ -296,20 +296,20 @@ class NotifyController extends Controller {
     public function test($wechat_id='10002'){
         $wechat = D('Wechat')->getInfo($wechat_id);
         dump($wechat);
-        $access_token = $this->client->getAuthorizerAccessToken($wechat_id['appid'], $wechat_id['refresh_token']);
+        $access_token = $this->client->getAuthorizerAccessToken($wechat['appid'], $wechat['refresh_token']);
         dump($access_token);
 
         import("@.Org.Wechat.TPWechat");
-        $wechat = new \TPWechat(array(
+        $client = new \TPWechat(array(
             'token'             => 'mwecookcn',
-            'appid'             => $wechat_id['appid'],
+            'appid'             => $wechat['appid'],
             //'appsecret'       => '5ee42c4df454aa74f652a2b62a13fe96',
             'encodingaeskey'    => 'XKymxSuMODUKy61arYTdD3BfuZ1SnzSDcXlivVGrPm9',
         ));
 
-        $wechat->checkAuth('', '', $access_token, 3600);
+        $client->checkAuth('', '', $access_token, 3600);
         
-        $data = $wechat->getUserList();
+        $data = $client->getUserList();
         dump($data);
     } 
 }
