@@ -261,9 +261,8 @@ class NotifyController extends Controller {
                     'msgtype'   => 'text',
                     'text'      => array('content'=>"{$query_auth_code}_from_api")
                 ));
+                $msg = '';
             }
-
-            $msg = '';
         }
 
         return $msg;  
