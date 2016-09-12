@@ -220,7 +220,6 @@ class NotifyController extends Controller {
             }
             
             if($msg){
-                @file_put_contents(RUNTIME_PATH."wechat_events_{$app_id}_{$time}_return.xml", $msg);
                 $this->client->text((string)$msg)->reply();
             }
         }else{
