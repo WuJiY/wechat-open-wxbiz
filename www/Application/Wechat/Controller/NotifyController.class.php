@@ -301,10 +301,9 @@ class NotifyController extends Controller {
 
         import("@.Org.Wechat.TPWechat");
         $client = new \TPWechat(array(
-            'token'             => 'mwecookcn',
+            'token'             => '',
             'appid'             => $wechat['appid'],
-            //'appsecret'       => '5ee42c4df454aa74f652a2b62a13fe96',
-            'encodingaeskey'    => 'XKymxSuMODUKy61arYTdD3BfuZ1SnzSDcXlivVGrPm9',
+            'encodingaeskey'    => '',
         ));
 
         $client->checkAuth('', '', $access_token, 3600);
@@ -323,10 +322,9 @@ class NotifyController extends Controller {
         
         import("@.Org.Wechat.TPWechat");
         $client = new \TPWechat(array(
-            'token'             => 'mwecookcn',
+            'token'             => '',
             'appid'             => $wechat['appid'],
-            //'appsecret'       => '5ee42c4df454aa74f652a2b62a13fe96',
-            'encodingaeskey'    => 'XKymxSuMODUKy61arYTdD3BfuZ1SnzSDcXlivVGrPm9',
+            'encodingaeskey'    => '',
         ));
 
         $client->checkAuth('', '', $access_token, 3600);
